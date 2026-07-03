@@ -45,6 +45,11 @@ svg{width:100%;height:auto}
 <div class="note">住居費・保育費を除いた「生活費ベース」がシミュの土台。CSV取込後も手で直せる</div>
 </div>
 
+<div class="card"><h2>📅 年間の収入・支出（月別・横並び）</h2>
+<div id="annual" style="overflow-x:auto"></div>
+<div class="note">MFのCSVを①にドロップすると月別に自動記録（既存の月は消えずに更新）。収入・支出セルはタップで手修正できる（千円単位）</div>
+</div>
+
 <div class="card"><h2>② シミュレーター（転職後の姿を、毎月の手取りで動かす）</h2>
 <div class="row"><label>自分の手取り月収</label><input type="range" id="netM" min="150000" max="700000" step="5000"><span class="val" id="netMv"></span></div>
 <div class="row"><label>配偶者の手取り月収</label><input type="range" id="spouseM" min="0" max="500000" step="5000"><span class="val" id="spouseMv"></span></div>
@@ -76,7 +81,7 @@ svg{width:100%;height:auto}
 <script>
 const $=id=>document.getElementById(id);
 const yen=n=>Math.round(n).toLocaleString()+"円";
-const DEF={expTotal:300000,rentNow:80000,childNow:30000,netM:450000,spouseM:0,rentNew:80000,childNew:30000,divY:630000,age:36,assets:18000000,kids:[{age:5,plan:"pub"}],retireGoal:30000000,yield:3};
+const DEF={monthly:{},expTotal:300000,rentNow:80000,childNow:30000,netM:450000,spouseM:0,rentNew:80000,childNew:30000,divY:630000,age:36,assets:18000000,kids:[{age:5,plan:"pub"}],retireGoal:30000000,yield:3};
 let S=Object.assign({},DEF,JSON.parse(localStorage.getItem("yoyu_v2")||"null")||{});
 // v1からの移行（額面×手取り率→手取り月収）
 const v1=JSON.parse(localStorage.getItem("yoyu_v1")||"null");
@@ -171,22 +176,49 @@ drop.ondrop=async e=>{e.preventDefault();drop.classList.remove("on");
   const hi=Object.fromEntries(head.map((c,i)=>[c,i]));
   const di=hi["日付"],ai=hi["金額（円）"],ci=hi["大項目"],ti=hi["計算対象"];
   const months={},housing={},child={};
+  const incomes={};
   rows.forEach(r=>{
     if(r===head)return;const amt=parseFloat((r[ai]||"").replace(/[^\-0-9.]/g,""));
-    if(!r[di]||isNaN(amt)||amt>=0)return;if(ti!==undefined&&r[ti]==="0")return;
-    const m=r[di].slice(0,7);months[m]=(months[m]||0)-amt;
+    if(!r[di]||isNaN(amt))return;if(ti!==undefined&&r[ti]==="0")return;
+    const m=r[di].slice(0,7);
+    if(amt>0){incomes[m]=(incomes[m]||0)+amt;return;}
+    months[m]=(months[m]||0)-amt;
     const cat=r[ci]||"";
     if(/住宅|家賃/.test(cat))housing[m]=(housing[m]||0)-amt;
     if(/教育|保育/.test(cat))child[m]=(child[m]||0)-amt;
   });
+  S.monthly=S.monthly||{};
+  new Set([...Object.keys(months),...Object.keys(incomes)]).forEach(m=>{
+    const prev=S.monthly[m]||{};
+    S.monthly[m]={inc:Math.round(incomes[m]??prev.inc??0),exp:Math.round(months[m]??prev.exp??0),housing:Math.round(housing[m]??prev.housing??0),child:Math.round(child[m]??prev.child??0)};
+  });
+  localStorage.setItem("yoyu_v2",JSON.stringify(S));
   const ms=Object.keys(months);if(!ms.length){$("mfsum").textContent="支出行が見つからん";return;}
   const avg=o=>Math.round(ms.reduce((s,m)=>s+(o[m]||0),0)/ms.length);
   S.expTotal=avg(months);S.rentNow=avg(housing);S.childNow=avg(child);
   ["expTotal","rentNow","childNow"].forEach(f=>$(f).value=S[f]);
   $("mfsum").innerHTML="✅ "+ms.length+"ヶ月分取込: 月平均支出 <b>"+yen(S.expTotal)+"</b>（住宅系 "+yen(S.rentNow)+"・教育/保育系 "+yen(S.childNow)+"）。CSVは端末内処理・保存は集計値のみ";
-  recalc();
+  recalc();renderAnnual();
 };
-renderKids();recalc();
+function renderAnnual(){
+  const ms=Object.keys(S.monthly||{}).sort();
+  if(!ms.length){$("annual").innerHTML='<div class="note">まだ記録なし。①にMFのCSVをドロップすると月別で貯まる</div>';return;}
+  const f=n=>n==null?"":Math.round(n/1000).toLocaleString();
+  const rows=[["収入",m=>S.monthly[m].inc,"inc"],["支出",m=>S.monthly[m].exp,"exp"],["収支",m=>(S.monthly[m].inc||0)-(S.monthly[m].exp||0),null],["うち住居",m=>S.monthly[m].housing,null],["うち保育",m=>S.monthly[m].child,null]];
+  let h='<table style="min-width:'+(ms.length*72+150)+'px"><tr><th style="position:sticky;left:0;background:#fff">千円</th>'+ms.map(m=>'<th>'+m.slice(2).replace("-","/")+'</th>').join('')+'<th style="background:#f6f8fb">合計</th><th style="background:#f6f8fb">月平均</th></tr>';
+  rows.forEach(([lb,fn,key],ri)=>{
+    const vals=ms.map(fn); const sum=vals.reduce((a,b)=>a+(b||0),0);
+    h+='<tr><td style="position:sticky;left:0;background:#fff;font-weight:700">'+lb+'</td>'
+      +ms.map((m,i)=>'<td'+(key?' contenteditable data-m="'+m+'" data-k="'+key+'"':'')+' style="'+(ri===2?(vals[i]>=0?'color:var(--ok)':'color:var(--ng)')+';font-weight:700':'')+'">'+f(vals[i])+'</td>').join('')
+      +'<td style="background:#f6f8fb;font-weight:700">'+f(sum)+'</td><td style="background:#f6f8fb">'+f(sum/ms.length)+'</td></tr>';});
+  h+='</table>';
+  $("annual").innerHTML=h;
+  $("annual").querySelectorAll("[contenteditable]").forEach(td=>td.onblur=()=>{
+    const v=parseFloat(td.textContent.replace(/[^0-9.\-]/g,""))*1000;
+    if(!isNaN(v)){S.monthly[td.dataset.m][td.dataset.k]=v;localStorage.setItem("yoyu_v2",JSON.stringify(S));renderAnnual();}
+  });
+}
+renderKids();recalc();renderAnnual();
 </script>
 </body>
 </html>
