@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>よゆうシミュ — 家賃をいくらまで上げられるか＋ライフプラン</title>
+<meta name="robots" content="noindex">
+<style>
+:root{--ink:#1a2233;--muted:#6b7688;--line:#e3e7ef;--bg:#f6f8fb;--accent:#0f62fe;--ok:#2e7d32;--warn:#b8860b;--ng:#c62828}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"Hiragino Sans",sans-serif;background:var(--bg);color:var(--ink);padding-bottom:40px}
+header{background:#14213d;color:#fff;padding:12px 16px}
+header h1{font-size:16px}header .sub{font-size:11px;color:#9fb3d9}
+main{max-width:720px;margin:0 auto;padding:12px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.card h2{font-size:13.5px;margin-bottom:8px}
+.row{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:13px;flex-wrap:wrap}
+.row label{min-width:150px;color:var(--muted);font-size:12px}
+.row input[type=range]{flex:1;min-width:120px}
+.row input[type=number]{width:96px;padding:6px;border:1px solid var(--line);border-radius:8px;font:inherit;text-align:right}
+.val{font-weight:800;min-width:84px;text-align:right}
+.big{font-size:26px;font-weight:800}
+.judge{border-radius:12px;padding:12px;text-align:center;font-weight:800;font-size:15px;margin:8px 0}
+.note{font-size:10.5px;color:var(--muted);line-height:1.6;margin-top:6px}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:16px;text-align:center;font-size:12px;color:var(--muted);cursor:pointer}
+.drop.on{border-color:var(--accent);color:var(--accent)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+td,th{padding:5px 6px;border-bottom:1px solid var(--line);text-align:right}
+td:first-child,th:first-child{text-align:left}
+select{padding:6px;border:1px solid var(--line);border-radius:8px;font:inherit}
+.pill{padding:6px 12px;border:1px solid var(--line);border-radius:99px;background:#fff;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+svg{width:100%;height:auto}
+</style>
+</head>
+<body>
+<header><h1>💰 よゆうシミュ</h1><div class="sub">家賃をいくらまで上げられるか・認可外保育でも回るか・ライフプラン。データはこの端末のブラウザ内にだけ保存（外部送信なし）</div></header>
+<main>
+
+<div class="card"><h2>① いまの支出（マネーフォワードCSV or 手入力）</h2>
+<div class="drop" id="drop">MFの家計簿CSV（設定→データエクスポート→月次かカレンダー期間のCSV）をここにドロップ<br>複数月まとめてOK。読み込むと月平均を自動計算</div>
+<div id="mfsum" class="note"></div>
+<div class="row"><label>月の総支出（住居費込み）</label><input type="number" id="expTotal" step="1000"><span>円</span></div>
+<div class="row"><label>うち、いまの住居費</label><input type="number" id="rentNow" step="1000"><span>円</span></div>
+<div class="row"><label>うち、いまの保育費</label><input type="number" id="childNow" step="1000"><span>円</span></div>
+<div class="note">住居費・保育費を除いた「生活費ベース」がシミュの土台になる。CSV取込後も手で直せる</div>
+</div>
+
+<div class="card"><h2>② シミュレーター（転職後の姿を動かす）</h2>
+<div class="row"><label>転職後の年収（額面）</label><input type="range" id="grossY" min="300" max="1500" step="10"><span class="val" id="grossYv"></span></div>
+<div class="row"><label>手取り率【概算】</label><input type="range" id="netRate" min="65" max="85" step="1"><span class="val" id="netRatev"></span></div>
+<div class="row"><label>新しい家賃・住居費</label><input type="range" id="rentNew" min="0" max="300000" step="5000"><span class="val" id="rentNewv"></span></div>
+<div class="row"><label>保育費（認可外なら上げる）</label><input type="range" id="childNew" min="0" max="120000" step="5000"><span class="val" id="childNewv"></span></div>
+<div class="row"><label>配当収入（年）</label><input type="number" id="divY" step="10000"><span>円</span></div>
+<div class="judge" id="judge"></div>
+<table id="calc"></table>
+<div class="note">判定＝「③ライフプランで必要な毎月の貯蓄」を確保できるか。緑=確保して黒字／黄=貯蓄が目標未達／赤=毎月赤字。<b>家賃上限の逆算</b>も下に表示</div>
+</div>
+
+<div class="card"><h2>③ ライフプラン（必要貯蓄の根拠）</h2>
+<div class="row"><label>現在の年齢</label><input type="number" id="age" min="20" max="60"><span>歳</span></div>
+<div class="row"><label>現在の資産</label><input type="number" id="assets" step="100000"><span>円</span></div>
+<div class="row"><label>子の年齢</label><input type="number" id="kidAge" min="0" max="22"><span>歳</span></div>
+<div class="row"><label>子の進路</label><select id="eduPlan">
+  <option value="pub">オール公立＋国立大（自宅）</option>
+  <option value="mixHS">高校から私立＋私立文系</option>
+  <option value="priJH">中学から私立＋私立文系</option>
+  <option value="pri">小学校から私立＋私立理系</option>
+</select></div>
+<div class="row"><label>老後資金の目標（65歳時点）</label><input type="number" id="retireGoal" step="1000000"><span>円</span></div>
+<div class="row"><label>資産の想定利回り（年）</label><input type="range" id="yield" min="0" max="7" step="0.5"><span class="val" id="yieldv"></span></div>
+<div id="planout" class="note"></div>
+<div id="chart"></div>
+<div class="note">教育費は文科省「子供の学習費調査」「私立大学等の学費調査」等からの概算年額（編集不可の簡易版）。数値は目安であり、実際の進路・学校で大きく変わる。※このアプリ全体が簡易シミュレーションであり、投資助言・確定的な資金計画ではない</div>
+</div>
+
+<div class="card"><h2>設定の保存</h2>
+<div class="row"><button class="pill" id="saveBtn">この端末に保存</button><button class="pill" id="resetBtn">リセット</button><span class="note" id="saveMsg"></span></div>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const yen=n=>Math.round(n).toLocaleString()+"円";
+const DEF={expTotal:300000,rentNow:80000,childNow:30000,grossY:900,netRate:78,rentNew:80000,childNew:30000,divY:630000,age:36,assets:18000000,kidAge:5,eduPlan:"pub",retireGoal:30000000,yield:3};
+const S=Object.assign({},DEF,JSON.parse(localStorage.getItem("yoyu_v1")||"{}"));
+// 教育費 年額概算（万円/年）: [小,中,高,大] ＋大学年数4
+const EDU={pub:[35,54,51,110],mixHS:[35,54,105,150],priJH:[35,144,105,150],pri:[167,144,105,180]};
+function eduYearCost(kidAge,plan){const e=EDU[plan];if(kidAge<6)return 0;if(kidAge<12)return e[0];if(kidAge<15)return e[1];if(kidAge<18)return e[2];if(kidAge<22)return e[3];return 0;}
+function eduRemainTotal(kidAge,plan){let t=0;for(let a=Math.max(kidAge,6);a<22;a++)t+=eduYearCost(a,plan);return t*10000;}
+function requiredMonthlySaving(){
+  // 教育費: 残り総額を大学卒業までの月数で均等積立（既に大学期なら残期間で）
+  const eduTotal=eduRemainTotal(S.kidAge,S.eduPlan);
+  const eduMonths=Math.max(12,(22-S.kidAge)*12);
+  const eduM=eduTotal/eduMonths;
+  // 老後: 目標-現資産の将来価値 を65歳まで積立（利回り考慮の簡易式）
+  const yrs=Math.max(1,65-S.age), r=S.yield/100;
+  const fvAssets=S.assets*Math.pow(1+r,yrs);
+  const gap=Math.max(0,S.retireGoal-fvAssets);
+  const factor=r>0?((Math.pow(1+r,yrs)-1)/r):yrs; // 年金終価係数
+  const retireM=gap/factor/12;
+  return {eduM,retireM,total:eduM+retireM};
+}
+function baseLiving(){return Math.max(0,S.expTotal-S.rentNow-S.childNow);}
+function recalc(){
+  ["grossYv","netRatev","rentNewv","childNewv","yieldv"].forEach(()=>{});
+  $("grossYv").textContent=S.grossY+"万円";$("netRatev").textContent=S.netRate+"%";
+  $("rentNewv").textContent=yen(S.rentNew);$("childNewv").textContent=yen(S.childNew);$("yieldv").textContent=S.yield+"%";
+  const net=S.grossY*10000*S.netRate/100/12, div=S.divY/12;
+  const req=requiredMonthlySaving();
+  const out=net+div-baseLiving()-S.rentNew-S.childNew;
+  const surplus=out-req.total;
+  const maxRent=net+div-baseLiving()-S.childNew-req.total;
+  $("calc").innerHTML=
+   "<tr><td>手取り月収【概算】＋配当</td><td>"+yen(net+div)+"</td></tr>"
+  +"<tr><td>生活費（住居・保育以外）</td><td>−"+yen(baseLiving())+"</td></tr>"
+  +"<tr><td>新しい住居費</td><td>−"+yen(S.rentNew)+"</td></tr>"
+  +"<tr><td>保育費</td><td>−"+yen(S.childNew)+"</td></tr>"
+  +"<tr><td><b>毎月残るお金</b></td><td><b>"+yen(out)+"</b></td></tr>"
+  +"<tr><td>ライフプラン上の必要貯蓄/月（教育"+yen(req.eduM)+"＋老後"+yen(req.retireM)+"）</td><td>−"+yen(req.total)+"</td></tr>"
+  +"<tr><td><b>ほんまの余裕</b></td><td><b style='color:"+(surplus>=0?"var(--ok)":"var(--ng)")+"'>"+yen(surplus)+"</b></td></tr>";
+  const j=$("judge");
+  if(out<0){j.style.background="#fdecea";j.style.color="var(--ng)";j.textContent="🔴 毎月赤字。この家賃・保育費は現状の収入では回らん";}
+  else if(surplus<0){j.style.background="#fff8e1";j.style.color="var(--warn)";j.textContent="🟡 黒字やがライフプラン貯蓄が月"+yen(-surplus)+"不足";}
+  else{j.style.background="#e8f5e9";j.style.color="var(--ok)";j.textContent="🟢 必要貯蓄を確保して毎月 "+yen(surplus)+" の自由なお金";}
+  j.insertAdjacentHTML("beforeend","<div style='font-size:12px;font-weight:600;margin-top:4px'>この条件での住居費上限【逆算】: <b>"+yen(Math.max(0,maxRent))+"</b>／月（必要貯蓄を守れる最大値）</div>");
+  drawChart(net,div,req);
+  $("planout").innerHTML="教育費 残り総額【概算】: <b>"+yen(eduRemainTotal(S.kidAge,S.eduPlan))+"</b>／65歳時点の資産見込み（現資産のみ運用時）: <b>"+yen(S.assets*Math.pow(1+S.yield/100,Math.max(0,65-S.age)))+"</b>";
+}
+function drawChart(net,div,req){
+  // 年次資産推移: 資産*(1+r) + 年間貯蓄(=毎月残るお金*12 − 教育費実額) 。65歳以降は年金+配当−生活費で取り崩し簡易
+  const r=S.yield/100;let a=S.assets;const pts=[];let kid=S.kidAge;
+  const saveM=net+div-baseLiving()-S.rentNew-S.childNew;
+  for(let age=S.age;age<=90;age++){
+    const edu=eduYearCost(kid,S.eduPlan)*10000;
+    const childCare=kid<6?S.childNew*12:0; // 小学校以降は保育費消滅
+    let flow;
+    if(age<65){flow=(net+div)*12-baseLiving()*12-S.rentNew*12-childCare-edu;}
+    else{flow=(140000+div)*12-baseLiving()*12-S.rentNew*12;} // 年金14万/月【概算・編集は今後】
+    a=a*(1+r)+flow;pts.push([age,a]);kid++;
+  }
+  const W=680,H=200,min=Math.min(0,...pts.map(p=>p[1])),max=Math.max(...pts.map(p=>p[1]));
+  const x=age=>(age-S.age)/(90-S.age)*(W-50)+40, y=v=>H-20-(v-min)/(max-min||1)*(H-40);
+  let path=pts.map((p,i)=>(i?"L":"M")+x(p[0]).toFixed(1)+","+y(p[1]).toFixed(1)).join("");
+  $("chart").innerHTML='<svg viewBox="0 0 '+W+' '+H+'">'
+   +'<line x1="40" y1="'+y(0)+'" x2="'+W+'" y2="'+y(0)+'" stroke="#ccc" stroke-dasharray="4 3"/>'
+   +'<path d="'+path+'" fill="none" stroke="#0f62fe" stroke-width="2.5"/>'
+   +[65,75,85].map(ag=>'<text x="'+x(ag)+'" y="'+(H-4)+'" font-size="10" fill="#6b7688" text-anchor="middle">'+ag+'歳</text>').join("")
+   +'<text x="42" y="14" font-size="11" fill="#6b7688">資産推移（90歳まで・年金14万/月概算込み）'+(min<0||pts.some(p=>p[1]<0)?"　⚠️どこかで資産が尽きる":"")+'</text></svg>';
+}
+// bind
+const FIELDS=["expTotal","rentNow","childNow","grossY","netRate","rentNew","childNew","divY","age","assets","kidAge","eduPlan","retireGoal","yield"];
+FIELDS.forEach(f=>{const el=$(f);el.value=S[f];el.addEventListener("input",()=>{S[f]=el.type==="number"||el.type==="range"?parseFloat(el.value)||0:el.value;recalc();});});
+$("saveBtn").onclick=()=>{localStorage.setItem("yoyu_v1",JSON.stringify(S));$("saveMsg").textContent="保存した（この端末のみ）";};
+$("resetBtn").onclick=()=>{localStorage.removeItem("yoyu_v1");location.reload();};
+// MF CSV drop
+const drop=$("drop");
+drop.ondragover=e=>{e.preventDefault();drop.classList.add("on");};
+drop.ondragleave=()=>drop.classList.remove("on");
+drop.ondrop=async e=>{e.preventDefault();drop.classList.remove("on");
+  let rows=[];
+  for(const f of e.dataTransfer.files){
+    const buf=await f.arrayBuffer();
+    let txt=new TextDecoder("utf-8").decode(buf);
+    if(txt.includes("�"))txt=new TextDecoder("shift_jis").decode(buf);
+    txt.split(/\r?\n/).forEach(l=>{const c=l.split(",").map(s=>s.replace(/^"|"$/g,""));if(c.length>4)rows.push(c);});
+  }
+  // MF形式: 計算対象,日付,内容,金額（円）,保有金融機関,大項目,中項目,...
+  const head=rows.find(r=>r.some(c=>c.includes("大項目")));
+  if(!head){$("mfsum").textContent="MFのCSV形式が読めんかった（列に「大項目」が見つからん）";return;}
+  const hi=Object.fromEntries(head.map((c,i)=>[c,i]));
+  const di=hi["日付"],ai=hi["金額（円）"],ci=hi["大項目"],ti=hi["計算対象"];
+  const months={},housing={},child={};
+  rows.forEach(r=>{
+    if(r===head)return;const amt=parseFloat((r[ai]||"").replace(/[^\-0-9.]/g,""));
+    if(!r[di]||isNaN(amt)||amt>=0)return; if(ti!==undefined&&r[ti]==="0")return;
+    const m=r[di].slice(0,7);months[m]=(months[m]||0)-amt;
+    const cat=r[ci]||"";
+    if(/住宅|家賃/.test(cat))housing[m]=(housing[m]||0)-amt;
+    if(/教育|保育/.test(cat))child[m]=(child[m]||0)-amt;
+  });
+  const ms=Object.keys(months);if(!ms.length){$("mfsum").textContent="支出行が見つからん（金額がマイナスの行が対象）";return;}
+  const avg=o=>Math.round(ms.reduce((s,m)=>s+(o[m]||0),0)/ms.length);
+  S.expTotal=avg(months);S.rentNow=avg(housing);S.childNow=avg(child);
+  ["expTotal","rentNow","childNow"].forEach(f=>$(f).value=S[f]);
+  $("mfsum").innerHTML="✅ "+ms.length+"ヶ月分を取込: 月平均支出 <b>"+yen(S.expTotal)+"</b>（住宅系 "+yen(S.rentNow)+"・教育/保育系 "+yen(S.childNow)+"）。CSVの中身は端末内で処理して破棄・保存はこの集計値だけ";
+  recalc();
+};
+recalc();
+</script>
+</body>
+</html>
