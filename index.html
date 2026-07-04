@@ -612,6 +612,24 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
   t.classList.add('on'); document.getElementById(t.dataset.p).classList.add('on');
 }));
 
+// ══════ 保活マップ連携: ?city=豊田市&childcare=70000 を受け取る ══════
+(function(){
+  const p = new URLSearchParams(location.search);
+  let changed = false;
+  if(p.get('city')){
+    const c = p.get('city');
+    if(HOIKU[c]){ S.city = c; changed = true; }
+  }
+  if(p.get('childcare')){
+    const fee = Math.round((+p.get('childcare')||0)/10000*10)/10; // 円→万円
+    if(fee > 0){
+      if(!S.kids.length) S.kids.push({birth:`${new Date().getFullYear()}-01`, stages:{...DEFAULT_STAGES}, care:'ninkagai', careFee:fee});
+      else { S.kids[0].care = 'ninkagai'; S.kids[0].careFee = fee; }
+      changed = true;
+    }
+  }
+  if(changed){ save(); render(); }
+})();
 render();
 </script>
 </body>
