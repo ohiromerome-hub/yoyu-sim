@@ -79,7 +79,7 @@
 <body>
 
 <header class="app"><div class="wrap">
-  <h1>💰 よゆうシミュ</h1><span class="ver">v3 β</span>
+  <h1>💰 よゆうシミュ</h1><span class="ver">v3 preview</span>
   <span class="sub">人生のお金の地図 — 全データは端末内のみ</span>
 </div></header>
 
@@ -165,8 +165,9 @@
   <div class="panel" id="p_past">
     <p style="font-size:.85rem;color:#7b87a3;margin-bottom:10px">これまでの積み上げが、シミュレーションの出発点になるで。</p>
     <div class="frow"><label>いまの貯蓄・資産<small>これまでの家計の結果（現預金＋投資）</small></label><input type="number" id="i_assets" step="10"><span>万円</span></div>
-    <div class="frow" style="border:0"><label>マネーフォワードの実績<small>過去の収支データから生活費を自動セット（v3正式版で搭載）</small></label>
-      <button class="ghost" onclick="alert('MF CSVドロップ取込はv3正式版で搭載（v2の機能を移植予定）')">📂 CSVを取り込む</button></div>
+    <h3 style="font-size:.92rem;margin:16px 0 6px">📒 収支リスト（マネーフォワード実績・2025/07〜2026/06）</h3>
+    <p style="font-size:.75rem;color:#96a0b8;margin-bottom:8px">セルをクリックで手修正できるで。横スクロールで全月表示。</p>
+    <div id="mftable" style="overflow-x:auto;border:1px solid var(--line);border-radius:12px"></div>
   </div>
 
   <!-- 📍 いま: 現在の暮らし -->
@@ -274,6 +275,48 @@ function ageFrom(birth){
   const [y,m]=birth.split('-').map(Number); const now=new Date();
   let a=now.getFullYear()-y; if(now.getMonth()+1 < m) a--;
   return a;
+}
+
+// ══════ マネーフォワード実績（収支リスト） ══════
+const MF_CATS=['食費','日用品','趣味・娯楽','交際費','交通費','衣服・美容','健康・医療','自動車','教養・教育','特別な支出','現金・カード','水道・光熱費','通信費','住宅','税・社会保障','保険','その他','未分類'];
+// 実データはHirokaのブラウザlocalStorage(yoyu_v3.mf)にのみ保存（公開HTMLには載せない）
+const MF_SEED={};
+const MF_MONTHS=['2025-07','2025-08','2025-09','2025-10','2025-11','2025-12','2026-01','2026-02','2026-03','2026-04','2026-05','2026-06'];
+function mfExpTotal(m){ const d=(S.mf||{})[m]; if(!d) return null; return MF_CATS.reduce((s,c)=>s+(+d.cats[c]||0),0); }
+function yen(n){ return n==null?'—':(n<0?'-':'')+Math.abs(Math.round(n)).toLocaleString()+'円'; }
+function renderMF(){
+  const box=document.getElementById('mftable'); if(!box) return;
+  S.mf = S.mf || {};
+  for(const [m,d] of Object.entries(MF_SEED)) if(!S.mf[m]) S.mf[m]={inc:d.inc, cats:{...d.cats}};  // 種データ（既存は上書きしない）
+  const th=m=>{const[y,mm]=m.split('-');return `${y}/${mm}/25〜`;};
+  const cellS='padding:7px 10px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;border-top:1px solid var(--line);cursor:pointer';
+  const headS='padding:8px 10px;text-align:right;white-space:nowrap;font-weight:700;background:#f0f3fa';
+  let h='<table style="border-collapse:collapse;font-size:.82rem;min-width:100%"><tr><th style="'+headS+';text-align:left;position:sticky;left:0;z-index:2">項目</th>'+MF_MONTHS.map(m=>'<th style="'+headS+'">'+th(m)+'</th>').join('')+'</tr>';
+  // 収入合計（青帯）
+  h+='<tr style="background:#e3f0fb;font-weight:800"><td style="padding:7px 10px;position:sticky;left:0;background:#e3f0fb">収入合計</td>'+MF_MONTHS.map(m=>`<td style="${cellS};border-top:0" data-mf="${m}|inc">${yen(S.mf[m]?.inc)}</td>`).join('')+'</tr>';
+  // 支出合計（オレンジ帯）
+  h+='<tr style="background:#fdecd8;font-weight:800"><td style="padding:7px 10px;position:sticky;left:0;background:#fdecd8">支出合計</td>'+MF_MONTHS.map(m=>`<td style="${cellS.replace('cursor:pointer','')}">${yen(mfExpTotal(m))}</td>`).join('')+'</tr>';
+  // 費目
+  for(const c of MF_CATS){
+    h+='<tr><td style="padding:6px 10px;color:#5b6b80;position:sticky;left:0;background:#fff;border-top:1px solid var(--line)">'+c+'</td>'+
+      MF_MONTHS.map(m=>`<td style="${cellS}" data-mf="${m}|${c}">${S.mf[m]?yen(+S.mf[m].cats[c]||0):'—'}</td>`).join('')+'</tr>';
+  }
+  // 収支合計
+  h+='<tr style="background:#f7f3ea;font-weight:800"><td style="padding:7px 10px;position:sticky;left:0;background:#f7f3ea">収支合計</td>'+MF_MONTHS.map(m=>{
+    const d=S.mf[m]; if(!d) return `<td style="${cellS.replace('cursor:pointer','')}">—</td>`;
+    const v=d.inc-mfExpTotal(m);
+    return `<td style="${cellS.replace('cursor:pointer','')};color:${v<0?'var(--bad)':'var(--safe)'}">${yen(v)}</td>`;
+  }).join('')+'</tr></table>';
+  box.innerHTML=h;
+  box.querySelectorAll('[data-mf]').forEach(td=>td.onclick=()=>{
+    const [m,key]=td.getAttribute('data-mf').split('|');
+    const cur=key==='inc'?(S.mf[m]?.inc||0):(S.mf[m]?.cats[key]||0);
+    const v=prompt(`${th(m)} ${key==='inc'?'収入合計':key}（円）`, cur);
+    if(v===null) return;
+    S.mf[m]=S.mf[m]||{inc:0,cats:{}};
+    if(key==='inc') S.mf[m].inc=+v||0; else S.mf[m].cats[key]=+v||0;
+    save(); renderMF();
+  });
 }
 
 // ══════ 保育エンジン ══════
@@ -432,7 +475,7 @@ function render(){
   document.getElementById('care_note').textContent = cares.length? `0-2歳の保育形態: ${cares.join('・')}` : '0-2歳のお子さんなし';
   document.getElementById('v_edu').textContent = fmt(eduMonthlyNeed()) + ' 万円/月';
 
-  renderKidsNow(); renderKidsFuture(); renderEvents(); drawChart();
+  renderKidsNow(); renderKidsFuture(); renderEvents(); renderMF(); drawChart();
 }
 function drawChart(){
   const cv=document.getElementById('chart'); const ctx=cv.getContext('2d');
@@ -612,24 +655,6 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
   t.classList.add('on'); document.getElementById(t.dataset.p).classList.add('on');
 }));
 
-// ══════ 保活マップ連携: ?city=豊田市&childcare=70000 を受け取る ══════
-(function(){
-  const p = new URLSearchParams(location.search);
-  let changed = false;
-  if(p.get('city')){
-    const c = p.get('city');
-    if(HOIKU[c]){ S.city = c; changed = true; }
-  }
-  if(p.get('childcare')){
-    const fee = Math.round((+p.get('childcare')||0)/10000*10)/10; // 円→万円
-    if(fee > 0){
-      if(!S.kids.length) S.kids.push({birth:`${new Date().getFullYear()}-01`, stages:{...DEFAULT_STAGES}, care:'ninkagai', careFee:fee});
-      else { S.kids[0].care = 'ninkagai'; S.kids[0].careFee = fee; }
-      changed = true;
-    }
-  }
-  if(changed){ save(); render(); }
-})();
 render();
 </script>
 </body>
