@@ -161,7 +161,7 @@
     <button class="tab" data-p="p_past">📜 これまで</button>
     <button class="tab on" data-p="p_now">📍 いま</button>
     <button class="tab" data-p="p_future">🔭 これから</button>
-    <button class="backwiz" onclick="S.setup=false;save();render()">← はじめの3問からやり直す</button>
+    <span style="font-size:.75rem;color:#96a0b8;align-self:center">設定は全部このタブ内で直せるで</span><button class="backwiz" style="margin-left:auto" onclick="if(confirm('最初の3問からやり直す？（入力値は保持されたままウィザードに戻る）')){S.setup=false;save();render()}">⟲ 3問からやり直す</button>
   </div>
 
   <!-- 📜 これまで: 過去の結果＝スタート地点 -->
