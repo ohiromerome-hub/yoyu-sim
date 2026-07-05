@@ -22,6 +22,25 @@
 
 
 
+
+  /* ══ 左サイドバー・ページ切替 ══ */
+  .wrap.wide{max-width:1240px}
+  .applayout{display:flex;gap:16px;align-items:flex-start;padding-top:14px}
+  .pagearea{flex:1;min-width:0}
+  .sidenav{width:172px;flex-shrink:0;position:sticky;top:14px;display:flex;flex-direction:column;gap:8px}
+  .navbtn{text-align:left;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:#fff;cursor:pointer;font:inherit;font-weight:800;font-size:.88rem;color:#6b6753;box-shadow:0 3px 10px rgba(90,85,60,.06)}
+  .navbtn small{display:block;font-size:.62rem;font-weight:600;color:#9a957f;margin-top:2px}
+  .navbtn.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .navbtn.on small{color:#e0e8d6}
+  .navbtn:hover:not(.on){background:#f4f6ee}
+  .page{display:none}.page.on{display:block}
+  #page_life .panel{display:block}
+  @media(max-width:900px){
+    .applayout{flex-direction:column}
+    .sidenav{position:static;width:100%;flex-direction:row}
+    .navbtn{flex:1;text-align:center;padding:10px 6px}
+    .navbtn small{display:none}
+  }
   /* ══ ari-mama風ダッシュボード ══ */
   .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
   @media(max-width:860px){.kpis{grid-template-columns:repeat(2,1fr)}}
@@ -222,8 +241,17 @@
 
 <!-- ══════ ダッシュボード ══════ -->
 <div id="dash" style="display:none">
-<div class="wrap">
+<div class="wrap wide applayout">
 
+  <nav class="sidenav">
+    <button class="navbtn on" data-page="page_diag">📊 診断結果<small>安心度・資産推移・改善</small></button>
+    <button class="navbtn" data-page="page_life">🧾 一生涯収支<small>一生の総収入と総支出</small></button>
+    <button class="navbtn" data-page="page_input">✏️ 入力・設定<small>これまで・いま・これから</small></button>
+  </nav>
+
+  <div class="pagearea">
+
+  <div class="page on" id="page_diag">
   <div id="results">
     <div class="kpis" id="kpicards"></div>
   </div>
@@ -244,12 +272,13 @@
     <div class="impbox" id="impactbox"></div>
     <div class="impbox" id="diagbox"></div>
   </div>
+  </div><!-- /page_diag -->
 
+  <div class="page" id="page_input">
   <div class="tabs">
     <button class="tab" data-p="p_past">📜 これまで</button>
     <button class="tab on" data-p="p_now">📍 いま</button>
     <button class="tab" data-p="p_future">🔭 これから</button>
-    <button class="tab" data-p="p_life">🧾 一生涯収支</button>
     <span style="font-size:.75rem;color:#96a0b8;align-self:center">設定は全部このタブ内で直せるで</span><button class="backwiz" style="margin-left:auto" onclick="if(confirm('最初の3問からやり直す？（入力値は保持されたままウィザードに戻る）')){S.setup=false;window.wizActive=true;save();render()}">⟲ 3問からやり直す</button>
   </div>
 
@@ -334,11 +363,16 @@
     <div id="events"></div>
   </div>
 
+  </div><!-- /page_input -->
+
   <!-- 🧾 一生涯収支（LifeNAVI風・マネフォ実績連動） -->
-  <div class="panel" id="p_life">
+  <div class="page" id="page_life">
+  <div class="panel" id="p_life" style="display:block">
     <div id="lifeview"></div>
   </div>
+  </div><!-- /page_life -->
 
+  </div><!-- /pagearea -->
 </div>
 </div>
 
@@ -1061,6 +1095,12 @@ document.addEventListener('change', e=>{
   if(e.target.id==='i_car'){ S.car.has=(e.target.value==='yes'); save(); render(); }
   if(e.target.id==='i_spwork'){ S.spouseWork=e.target.value; save(); render(); }
 });
+document.querySelectorAll('.navbtn').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); document.getElementById(b.dataset.page).classList.add('on');
+  if(b.dataset.page==='page_diag') drawChart();
+}));
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.panel').forEach(x=>x.classList.remove('on'));
