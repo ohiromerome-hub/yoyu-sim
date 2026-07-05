@@ -154,6 +154,9 @@
     <canvas id="chart" width="900" height="230"></canvas>
   </div>
 
+  <!-- 家計の通信簿: MF実績×目標支出率（資産カーブ直下・Hiroka要望 2026-07-05） -->
+  <div class="cards" id="budgetcards" style="margin-top:12px; display:none"></div>
+
   <div class="tabs">
     <button class="tab" data-p="p_past">📜 これまで</button>
     <button class="tab on" data-p="p_now">📍 いま</button>
@@ -254,7 +257,7 @@ const DEF = {
   rent:8.5, rentTry:8.5, city:'名古屋市',
   kids:[{birth:'2024-05', stages:{...{sho:'pub',chu:'pub',kou:'pub',dai:'pub',grad:'none'}}, care:'auto', careFee:7.0}],
   car:{has:true, monthly:2.0, every:10, cost:250},
-  oldGoal:2000, pension:20, retire:65, events:[]
+  oldGoal:2000, pension:20, retire:65, events:[], targetExpRate:90
 };
 let S = load();
 function load(){
@@ -295,6 +298,28 @@ const MF_SEED={};
 const MF_MONTHS=['2025-07','2025-08','2025-09','2025-10','2025-11','2025-12','2026-01','2026-02','2026-03','2026-04','2026-05','2026-06'];
 function mfExpTotal(m){ const d=(S.mf||{})[m]; if(!d) return null; return MF_CATS.reduce((s,c)=>s+(+d.cats[c]||0),0); }
 function yen(n){ return n==null?'—':(n<0?'-':'')+Math.abs(Math.round(n)).toLocaleString()+'円'; }
+// ══════ 家計の通信簿: 年間実績 vs 目標支出（9割以内で生活できとるか） ══════
+function renderBudget(){
+  const box=document.getElementById('budgetcards'); if(!box) return;
+  const months=Object.keys(S.mf||{}).filter(m=>S.mf[m]&&(S.mf[m].inc||mfExpTotal(m)));
+  if(!months.length){ box.style.display='none'; return; }
+  box.style.display='grid';
+  const inc=months.reduce((s,m)=>s+(+S.mf[m].inc||0),0);
+  const exp=months.reduce((s,m)=>s+(mfExpTotal(m)||0),0);
+  const rate=S.targetExpRate||90;                    // 目標支出率（収入の◯%で生活する目標）
+  const budget=inc*rate/100;                          // 年間の目標支出額
+  const usage=budget? exp/budget*100 : 0;             // 目標に対する消化率
+  const cls= usage<=90?'ok' : usage<=100?'warn' : 'bad';
+  const mark= usage<=90?'◎ 9割以内で生活できとる' : usage<=100?'△ 目標内ギリギリ' : '✕ 目標オーバー';
+  const saveRate=inc? Math.round((1-exp/inc)*1000)/10 : 0;
+  box.innerHTML=
+    `<div class="rcard"><div class="lbl">📒 年間収入（実績 ${months.length}ヶ月）</div><div class="val">${yen(inc)}</div><div class="note">マネフォ収支リストの合計</div></div>`+
+    `<div class="rcard ${saveRate>=10?'ok':saveRate>=0?'warn':'bad'}"><div class="lbl">📉 年間支出（貯蓄率 ${saveRate}%）</div><div class="val">${yen(exp)}</div><div class="note">月平均 ${yen(Math.round(exp/months.length))}</div></div>`+
+    `<div class="rcard ${cls}"><div class="lbl">🎯 目標支出比の消化率</div><div class="val">${Math.round(usage*10)/10}<small> %</small></div>`+
+    `<div class="note">${mark}／目標支出率 <input type="number" id="i_trate" value="${rate}" min="10" max="150" style="width:52px;padding:2px 4px;border:1px solid var(--line);border-radius:6px;text-align:right;font:inherit;font-size:11px">% × 年間収入 = ${yen(Math.round(budget))}</div></div>`;
+  const tr=document.getElementById('i_trate');
+  tr.onchange=()=>{ S.targetExpRate=+tr.value||90; save(); renderBudget(); };
+}
 function renderMF(){
   const box=document.getElementById('mftable'); if(!box) return;
   S.mf = S.mf || {};
@@ -486,7 +511,7 @@ function render(){
   document.getElementById('care_note').textContent = cares.length? `0-2歳の保育形態: ${cares.join('・')}` : '0-2歳のお子さんなし';
   document.getElementById('v_edu').textContent = fmt(eduMonthlyNeed()) + ' 万円/月';
 
-  renderKidsNow(); renderKidsFuture(); renderEvents(); renderMF(); drawChart();
+  renderKidsNow(); renderKidsFuture(); renderEvents(); renderMF(); renderBudget(); drawChart();
 }
 function drawChart(){
   const cv=document.getElementById('chart'); const ctx=cv.getContext('2d');
