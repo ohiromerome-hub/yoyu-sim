@@ -79,8 +79,8 @@
 <body>
 
 <header class="app"><div class="wrap">
-  <h1>💰 よゆうシミュ</h1><span class="ver">v3 preview</span>
-  <span class="sub">人生のお金の地図 — 全データは端末内のみ</span>
+  <h1>💰 よゆうシミュ</h1><span class="ver">v3 β</span>
+  <span class="sub" id="auth">人生のお金の地図</span>
 </div></header>
 
 <!-- ══════ ウィザード ══════ -->
@@ -244,7 +244,7 @@
 <footer>
   すべての計算は<b>概算</b>です（認可保育料=市の階層表の概算・認可外=保活マップ準拠の目安7万円/月・教育費=文科省「子供の学習費調査」ベースの丸め値・年金=モデル世帯の概算）。<br>
   本ツールは情報提供のみを目的とし、投資助言・保険募集ではありません。数値の正確性は保証されません。<br>
-  データはすべてこの端末のlocalStorageにのみ保存され、外部送信されません。
+  データは端末内（localStorage）に保存。Googleログイン中は本人のFirestore領域にも同期され、他人からは読めません。
 </footer>
 
 <script>
@@ -269,7 +269,18 @@ function load(){
     return {...DEF,...j, car:{...DEF.car, ...(j.car||{})}};
   }catch(e){ return JSON.parse(JSON.stringify(DEF)); }
 }
-function save(){ localStorage.setItem('yoyu_v3', JSON.stringify(S)); }
+function save(){
+  S.updatedAt = Date.now();                       // 端末間の新旧判定用
+  localStorage.setItem('yoyu_v3', JSON.stringify(S));
+  if(window.cloudPush) window.cloudPush(JSON.parse(JSON.stringify(S)));  // ログイン中ならクラウドへ（debounce付き）
+}
+// クラウド側が新しいときに呼ばれる（Firestore→ローカル反映）
+window.applyCloud = function(cs){
+  if(!cs) return;
+  S = {...S, ...cs};
+  localStorage.setItem('yoyu_v3', JSON.stringify(S));
+  render();
+};
 function ageFrom(birth){
   if(!birth) return 0;
   const [y,m]=birth.split('-').map(Number); const now=new Date();
@@ -656,6 +667,71 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
 }));
 
 render();
+</script>
+<script type="module">
+// ══════ Google連携（Firestore同期・benchmark-naviと同じFirebaseプロジェクト） ══════
+// データは users/{自分のuid}/apps/yoyu_v3 に保存。本人のGoogleログインでのみ読み書き（Firestoreルールで保護）。
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB-Jk2D7rszFv0DJs-EsheeijZYdFql1fM",
+  authDomain: "molten-reach-496513-c6.firebaseapp.com",
+  projectId: "molten-reach-496513-c6",
+  appId: "1:576477853201:web:c9b7014297ed6e2d3963b0"
+};
+const fapp = initializeApp(firebaseConfig);
+const auth = getAuth(fapp);
+const db = getFirestore(fapp);
+const $a = document.getElementById('auth');
+
+let user = null;
+let cloudOK = false;   // 読込成功前は書き込まない（空上書き事故の防止・bnavと同じ保護）
+let timer = null;
+
+const refOf = u => doc(db, 'users', u.uid, 'apps', 'yoyu_v3');
+const btnS = 'margin-left:8px;font:inherit;font-size:11px;font-weight:700;padding:4px 12px;border-radius:99px;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.12);color:#fff;cursor:pointer';
+const statS = 'margin-left:8px;font-size:10.5px;opacity:.8';
+
+function stat(msg){ const el=document.getElementById('syncstat'); if(el) el.textContent=msg; }
+
+window.cloudPush = (s)=>{
+  if(!user || !cloudOK) return;
+  clearTimeout(timer);
+  timer = setTimeout(async ()=>{
+    try{
+      await setDoc(refOf(user), {S:s, updatedAt: s.updatedAt || Date.now()});
+      stat('☁ 同期済み ' + new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}));
+    }catch(e){ stat('⚠ 同期失敗（データは端末に保持）'); }
+  }, 800);
+};
+
+onAuthStateChanged(auth, async (u)=>{
+  user = u; cloudOK = false;
+  if(!u){
+    $a.innerHTML = '人生のお金の地図 <button id="glogin" style="'+btnS+'">Googleでログインして同期</button>';
+    document.getElementById('glogin').onclick = ()=> signInWithPopup(auth, new GoogleAuthProvider()).catch(()=>{});
+    return;
+  }
+  $a.innerHTML = '☁ '+ (u.email||'') +' <span id="syncstat" style="'+statS+'"></span><button id="gout" style="'+btnS+'">ログアウト</button>';
+  document.getElementById('gout').onclick = ()=> signOut(auth);
+  try{
+    const snap = await getDoc(refOf(u));
+    cloudOK = true;
+    const local = JSON.parse(localStorage.getItem('yoyu_v3')||'{}');
+    if(snap.exists()){
+      const c = snap.data();
+      if((c.updatedAt||0) > (local.updatedAt||0)){ window.applyCloud(c.S); stat('☁ クラウドから復元'); }
+      else { window.cloudPush(local); }
+    } else {
+      window.cloudPush(local);  // 初回: 端末のデータをクラウドへ
+    }
+  }catch(e){
+    cloudOK = false;
+    stat('⚠ クラウド読込失敗（上書き保護中・端末データで動作）');
+  }
+});
 </script>
 </body>
 </html>
