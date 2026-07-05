@@ -823,7 +823,7 @@ function renderEnemy4(){
     const cats=Object.entries(byCat).filter(([c])=> (ENEMY_MAP[c]||4)===k).sort((a,b)=>b[1]-a[1]).slice(0,4)
       .map(([c,v])=>`${c} ${yen(Math.round(v*12/months.length))}`).join('・');
     return `<div class="en4 ${e.cls}"><div class="hd"><span class="no" style="background:inherit"></span><span class="no">${e.no}</span>${e.t}<small style="margin-left:auto;font-weight:600;color:#8a8672">${['毎月×固定','毎月×変動','不定期×固定','不定期×変動'][i]}</small></div>
-      <div class="amt">${yen(Math.round(yearly(k)))}<small> /年（月平均 ${yen(Math.round(yearly(k)/12))}）</small></div>
+      <div class="amt">${yen(Math.round(yearly(k)/12))}<small> /月平均（年間 ${yen(Math.round(yearly(k)))}）</small></div>
       <div class="cats">${cats||'該当カテゴリの実績なし'}<br><small style="color:#b0ab94">例: ${e.ex}</small></div></div>`;
   }).join('');
   const segCols=['#5b7fae','#d98d5f','#8a7ab0','#c25e4c'];
