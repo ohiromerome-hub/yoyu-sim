@@ -41,6 +41,33 @@
     .navbtn{flex:1;text-align:center;padding:10px 6px}
     .navbtn small{display:none}
   }
+
+  /* ══ 4つの敵・通貨vs株式ガイド ══ */
+  .en4grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 16px}
+  @media(max-width:700px){.en4grid{grid-template-columns:1fr}}
+  .en4{border-radius:12px;padding:12px 14px;border:1px solid var(--line)}
+  .en4 .hd{display:flex;align-items:center;gap:8px;font-weight:900;font-size:.85rem}
+  .en4 .hd .no{color:#fff;border-radius:8px;padding:2px 9px;font-size:.75rem}
+  .en4 .amt{font-size:1.3rem;font-weight:900;margin:4px 0 2px}
+  .en4 .amt small{font-size:.68rem;color:#8a8672;font-weight:700}
+  .en4 .cats{font-size:.66rem;color:#8a8672;line-height:1.7}
+  .en4.e1{background:#eef2f8}.en4.e1 .no{background:#5b7fae}
+  .en4.e2{background:#fdf3ef}.en4.e2 .no{background:#d98d5f}
+  .en4.e3{background:#f3f0fa}.en4.e3 .no{background:#8a7ab0}
+  .en4.e4{background:#fbeeee}.en4.e4 .no{background:#c25e4c}
+  .en4bar{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:16px}
+  .en4bar .line{height:14px;border-radius:99px;background:#eee9dc;overflow:hidden;display:flex;margin:8px 0 4px}
+  .en4bar .line i{display:block;height:100%}
+  .guidebox{background:#fdf8ec;border:1px solid #ecdfc0;border-radius:12px;padding:14px 16px;margin-bottom:14px}
+  .guidebox h4{font-size:.85rem;margin-bottom:8px}
+  .gb2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:700px){.gb2{grid-template-columns:1fr}}
+  .gbcell{background:#fff;border-radius:10px;padding:10px 12px;font-size:.76rem;line-height:1.7;border:1px solid #efe8d5}
+  .gbcell b.t{display:block;font-size:.82rem;margin-bottom:2px}
+  .gbtable{width:100%;border-collapse:collapse;font-size:.72rem;margin-top:10px}
+  .gbtable th,.gbtable td{border:1px solid #ecdfc0;padding:6px 8px;text-align:center}
+  .gbtable th{background:#f6efdd}
+  .gbtable .ok{color:#4c7040;font-weight:900}.gbtable .ng{color:#c25e4c;font-weight:900}
   /* ══ ari-mama風ダッシュボード ══ */
   .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
   @media(max-width:860px){.kpis{grid-template-columns:repeat(2,1fr)}}
@@ -285,6 +312,9 @@
   <!-- 📜 これまで: 過去の結果＝スタート地点 -->
   <div class="panel" id="p_past">
     <p style="font-size:.85rem;color:#7b87a3;margin-bottom:10px">これまでの積み上げが、シミュレーションの出発点になるで。</p>
+    <h3 style="font-size:.92rem;margin:16px 0 6px">⚔️ 家計管理〜4つの敵〜 <span class="approx">リベ大式・MF実績から自動分類</span></h3>
+    <p style="font-size:.72rem;color:#8a8672;margin-bottom:6px">1年間の支出を「毎月/不定期 × 固定/変動」の4つの敵に分けて抜け漏れなく把握するで。目標=<b>4つ全部の支出を手取りの8割以内</b>（残業代・ボーナス含まず）・2割は貯蓄・投資へ。</p>
+    <div id="enemy4"></div>
     <h3 style="font-size:.92rem;margin:16px 0 6px">📒 収支リスト（マネーフォワード実績・2025/07〜2026/06）</h3>
     <p style="font-size:.75rem;color:#96a0b8;margin-bottom:8px">セルをクリックで手修正できるで。横スクロールで全月表示。</p>
     <div id="mftable" style="overflow-x:auto;border:1px solid var(--line);border-radius:12px"></div>
@@ -333,6 +363,18 @@
 
   <!-- 🔭 これから: 予定と備え -->
   <div class="panel" id="p_future">
+    <div class="guidebox">
+      <h4>🦁 お金の置き場所の指針 — 「いつ払うか」で決める<span class="approx" style="margin-left:6px">リベ大式</span></h4>
+      <div class="gb2">
+        <div class="gbcell"><b class="t">🪙 短期の支払いに備えるなら → 通貨（貯金）</b>例: 1年後の自動車購入費・3年後の子どもの学費。価格変動が小さく、短期の支払い準備に◎</div>
+        <div class="gbcell"><b class="t">📈 長期的に富を維持するなら → 株式（投資）</b>例: 15年後の大学資金・30年後の老後資金。長期では価値が上がる傾向で、富の維持・成長に◎</div>
+      </div>
+      <table class="gbtable">
+        <tr><th></th><th>🪙 通貨（貯金）</th><th>📈 株式（投資）</th></tr>
+        <tr><th>短期（3年以内）</th><td class="ok">◎ 価格変動が小さい</td><td class="ng">△ 価格変動が大きい</td></tr>
+        <tr><th>長期（15年以上）</th><td class="ng">△ 価値が下がる運命</td><td class="ok">◎ 価値が上がる傾向</td></tr>
+      </table>
+    </div>
     <h3 style="font-size:.92rem;margin-bottom:4px">🎓 子どもの進路プラン（公立/私立）</h3>
     <div id="kidplan"></div>
     <div class="frow" style="border:0"><label>大学・院費用の積立必要額（自動）<small>18歳までに前倒し積立 <span class="approx">概算</span></small></label><b id="v_edu">—</b></div>
@@ -752,6 +794,46 @@ function renderLife(){
 }
 
 
+
+// ══════ ⚔️ 4つの敵（リベ大式・MFカテゴリ自動分類） ══════
+const ENEMY_MAP={ // 1:毎月固定 2:毎月変動 3:不定期固定 4:不定期変動
+  '住宅':1,'水道・光熱費':1,'通信費':1,'保険':1,'教養・教育':1,
+  '食費':2,'日用品':2,'衣服・美容':2,'健康・医療':2,'交通費':2,'趣味・娯楽':2,'交際費':2,
+  '税・社会保障':3,'自動車':3,
+  '特別な支出':4,'現金・カード':4,'その他':4,'未分類':4
+};
+const ENEMY_INFO=[
+  {no:'敵1',t:'毎月の固定費',ex:'住居・水道光熱・通信・保険・教育',cls:'e1'},
+  {no:'敵2',t:'毎月の変動費',ex:'食費・日用品・被服美容・医療・交通',cls:'e2'},
+  {no:'敵3',t:'不定期の固定費',ex:'税金・車検・自動車保険・年会費',cls:'e3'},
+  {no:'敵4',t:'不定期の変動費',ex:'家電・車購入・旅行・冠婚葬祭・特別な支出',cls:'e4'},
+];
+function renderEnemy4(){
+  const box=document.getElementById('enemy4'); if(!box) return;
+  const months=Object.keys(S.mf||{}).filter(m=>S.mf[m]&&mfExpTotal(m));
+  if(!months.length){ box.innerHTML='<p style="font-size:.75rem;color:#9a957f">収支リストに実績を入れると、ここに4つの敵の内訳が出るで</p>'; return; }
+  const tot=[0,0,0,0,0]; const byCat={};
+  for(const m of months) for(const c of MF_CATS){ const v=+S.mf[m].cats[c]||0; if(!v) continue; tot[ENEMY_MAP[c]||4]+=v; byCat[c]=(byCat[c]||0)+v; }
+  const yearly=k=> months.length? tot[k]*12/months.length : 0;   // 年換算
+  const all=yearly(1)+yearly(2)+yearly(3)+yearly(4);
+  const cap=(S.myNet+((S.spouseWork==='part'||S.spouseWork==='full')?S.spouseNet:0))*12*10000*0.8; // 手取り8割（ボーナス除く）
+  const rate=cap? all/cap*100:0;
+  const cells=ENEMY_INFO.map((e,i)=>{
+    const k=i+1;
+    const cats=Object.entries(byCat).filter(([c])=> (ENEMY_MAP[c]||4)===k).sort((a,b)=>b[1]-a[1]).slice(0,4)
+      .map(([c,v])=>`${c} ${yen(Math.round(v*12/months.length))}`).join('・');
+    return `<div class="en4 ${e.cls}"><div class="hd"><span class="no" style="background:inherit"></span><span class="no">${e.no}</span>${e.t}<small style="margin-left:auto;font-weight:600;color:#8a8672">${['毎月×固定','毎月×変動','不定期×固定','不定期×変動'][i]}</small></div>
+      <div class="amt">${yen(Math.round(yearly(k)))}<small> /年（月平均 ${yen(Math.round(yearly(k)/12))}）</small></div>
+      <div class="cats">${cats||'該当カテゴリの実績なし'}<br><small style="color:#b0ab94">例: ${e.ex}</small></div></div>`;
+  }).join('');
+  const segCols=['#5b7fae','#d98d5f','#8a7ab0','#c25e4c'];
+  const segs=[1,2,3,4].map(k=>`<i style="width:${all?yearly(k)/all*Math.min(100,rate):0}%;background:${segCols[k-1]}"></i>`).join('');
+  box.innerHTML=`<div class="en4grid">${cells}</div>
+    <div class="en4bar"><b style="font-size:.8rem">🎯 4つの敵の合計 ${yen(Math.round(all))}/年 ＝ 手取り8割ライン（${yen(Math.round(cap))}）の <b class="${rate<=100?'gA':'gD'}" style="font-size:1.05rem">${Math.round(rate)}%</b> ${rate<=100?'◎ 8割以内に収まっとる！2割は貯蓄・投資へ':'✕ 8割オーバー。敵1（固定費）から見直すと効きやすいで'}</b>
+    <div class="line">${segs}</div>
+    <small style="font-size:.66rem;color:#9a957f">青=敵1 橙=敵2 紫=敵3 赤=敵4／バー全体=手取り8割ライン（世帯月収×12×0.8・ボーナス含まず）</small></div>`;
+}
+
 // ══════ ari-mama風ダッシュボード描画 ══════
 function impAdj(){ const i=S.imp||{}; return {inc:+i.inc||0, gen:+i.gen||0, sen:+i.sen||0, care:+i.care||0}; }
 function hasImp(){ const a=impAdj(); return a.inc||a.gen||a.sen||a.care; }
@@ -889,7 +971,7 @@ function render(){
   document.getElementById('care_note').textContent = cares.length? `0-2歳の保育形態: ${cares.join('・')}` : '0-2歳のお子さんなし';
   document.getElementById('v_edu').textContent = fmt(eduMonthlyNeed()) + ' 万円/月';
 
-  renderKidsNow(); renderKidsFuture(); renderEvents(); renderMF(); renderBudget(); renderLife(); renderDashboard(); drawChart();
+  renderKidsNow(); renderKidsFuture(); renderEvents(); renderMF(); renderEnemy4(); renderBudget(); renderLife(); renderDashboard(); drawChart();
 }
 function drawChart(){
   const cv=document.getElementById('chart'); const ctx=cv.getContext('2d');
