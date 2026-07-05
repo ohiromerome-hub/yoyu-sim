@@ -285,7 +285,6 @@
   <!-- 📜 これまで: 過去の結果＝スタート地点 -->
   <div class="panel" id="p_past">
     <p style="font-size:.85rem;color:#7b87a3;margin-bottom:10px">これまでの積み上げが、シミュレーションの出発点になるで。</p>
-    <div class="frow"><label>いまの貯蓄・資産<small>これまでの家計の結果（現預金＋投資）</small></label><input type="number" id="i_assets" step="10"><span>万円</span></div>
     <h3 style="font-size:.92rem;margin:16px 0 6px">📒 収支リスト（マネーフォワード実績・2025/07〜2026/06）</h3>
     <p style="font-size:.75rem;color:#96a0b8;margin-bottom:8px">セルをクリックで手修正できるで。横スクロールで全月表示。</p>
     <div id="mftable" style="overflow-x:auto;border:1px solid var(--line);border-radius:12px"></div>
@@ -297,6 +296,9 @@
       <div class="rcard" id="c_room"><div class="lbl">🏠 住居費はいくらまでOK？</div><div class="val" id="v_room">—<small> 万円/月</small></div><div class="note">教育・老後・車の積立を確保したうえでの上限</div></div>
       <div class="rcard" id="c_yoyu"><div class="lbl">😊 今の余裕</div><div class="val" id="v_yoyu">—<small> 万円/月</small></div><div class="note">収入 − 生活費 − 住居費 − 子ども費 − 車</div></div>
     </div>
+    <div class="frow"><label>💵 貯金（現預金）<small>普通・定期預金など</small></label><input type="number" id="i_cash" step="10"><span>万円</span></div>
+    <div class="frow"><label>📈 投資（株・投信など）<small>NISA・特定口座の評価額</small></label><input type="number" id="i_invest" step="10"><span>万円</span></div>
+    <div class="frow" style="border-bottom:2px solid var(--line)"><label style="color:var(--blue)">資産合計（自動計算）</label><b id="v_assets" style="font-size:1.1rem">—</b><span>万円</span></div>
     <div class="frow"><label>あなたの手取り月収</label><input type="number" id="i_mynet" step="0.5"><span>万円/月</span></div>
     <div class="frow"><label>配偶者の働き方<small>保育園の入りやすさ・保育料の自動判定に使うで</small></label>
       <select id="i_spwork">
@@ -385,7 +387,7 @@
 <script>
 // ══════ 状態 ══════
 const DEF = {
-  setup:false, myNet:28, spouseWork:'full', spouseNet:10, bonus:60, living:22, assets:500, birth:'1990-04',
+  setup:false, myNet:28, spouseWork:'full', spouseNet:10, bonus:60, living:22, assets:500, cash:500, invest:0, birth:'1990-04',
   rent:8.5, rentTry:8.5, city:'名古屋市',
   kids:[{birth:'2024-05', stages:{...{sho:'pub',chu:'pub',kou:'pub',dai:'pub',grad:'none'}}, care:'auto', careFee:7.0}],
   car:{has:true, monthly:2.0, every:10, cost:250},
@@ -401,7 +403,10 @@ function load(){
       stages: k.stages || (PLAN_TO_STAGES[k.plan] ? {...PLAN_TO_STAGES[k.plan]} : {sho:'pub',chu:'pub',kou:'pub',dai:'pub',grad:'none'}),
       care:k.care||'auto', careFee:k.careFee??7.0}));
     if(j.age && !j.birth) j.birth = `${new Date().getFullYear()-j.age}-04`;
-    return {...DEF,...j, car:{...DEF.car, ...(j.car||{})}};
+    const m={...DEF,...j, car:{...DEF.car, ...(j.car||{})}};
+    if(j.cash===undefined && j.invest===undefined){ m.cash=m.assets; m.invest=0; }  // 旧データ移行
+    m.assets=(+m.cash||0)+(+m.invest||0);
+    return m;
   }catch(e){ return JSON.parse(JSON.stringify(DEF)); }
 }
 function save(){
@@ -857,8 +862,9 @@ function render(){
   document.getElementById('gate').style.display='none';
   document.getElementById('wizard').style.display='none'; document.getElementById('dash').style.display='block';
 
-  const map={i_mynet:'myNet',i_spnet:'spouseNet',i_bonus:'bonus',i_living:'living',i_assets:'assets',i_rent:'rent',i_oldgoal:'oldGoal',i_pension:'pension',i_retire:'retire'};
+  const map={i_mynet:'myNet',i_spnet:'spouseNet',i_bonus:'bonus',i_living:'living',i_cash:'cash',i_invest:'invest',i_rent:'rent',i_oldgoal:'oldGoal',i_pension:'pension',i_retire:'retire'};
   for(const [id,key] of Object.entries(map)){ const el=document.getElementById(id); if(document.activeElement!==el) el.value=S[key]; }
+  const va=document.getElementById('v_assets'); if(va) va.textContent=fmt(S.assets);
   const bi=document.getElementById('i_birth'); if(document.activeElement!==bi) bi.value=S.birth;
   document.getElementById('v_age').textContent=myAge();
   document.getElementById('i_city').value=S.city;
@@ -956,7 +962,9 @@ function wizNext(){
   else if(wstep===2){ S.living=+document.getElementById('w_living').value||DEF.living; wstep=3;
     document.getElementById('wnext').textContent='この内容で地図をつくる 🗺'; }
   else {
-    S.assets=+document.getElementById('w_assets').value||DEF.assets;
+    const wa=+document.getElementById('w_assets').value||DEF.assets;
+    if(wa!==S.assets){ S.cash=Math.max(0,wa-(+S.invest||0)); S.invest=Math.min(+S.invest||0,wa); }
+    S.assets=wa;
     S.birth=document.getElementById('w_birth').value||DEF.birth;
     S.car.has=document.getElementById('w_car').checked;
     S.rentTry=S.rent; S.setup=true; save(); render(); return;
@@ -1083,8 +1091,10 @@ function renderEvents(){
 }
 
 document.addEventListener('input', e=>{
-  const map={i_mynet:'myNet',i_spnet:'spouseNet',i_bonus:'bonus',i_living:'living',i_assets:'assets',i_rent:'rent',i_oldgoal:'oldGoal',i_pension:'pension',i_retire:'retire'};
-  if(map[e.target.id]!==undefined){ S[map[e.target.id]]=+e.target.value||0; save(); render(); }
+  const map={i_mynet:'myNet',i_spnet:'spouseNet',i_bonus:'bonus',i_living:'living',i_cash:'cash',i_invest:'invest',i_rent:'rent',i_oldgoal:'oldGoal',i_pension:'pension',i_retire:'retire'};
+  if(map[e.target.id]!==undefined){ S[map[e.target.id]]=+e.target.value||0;
+    if(e.target.id==='i_cash'||e.target.id==='i_invest') S.assets=(+S.cash||0)+(+S.invest||0);
+    save(); render(); }
   if(e.target.id==='i_rent_try'){ S.rentTry=+e.target.value; save(); render(); }
   const carmap={i_carm:'monthly',i_carevery:'every',i_carcost:'cost'};
   if(carmap[e.target.id]){ S.car[carmap[e.target.id]]=+e.target.value||0; save(); render(); }
