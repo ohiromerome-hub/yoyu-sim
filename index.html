@@ -690,7 +690,8 @@ let user = null;
 let cloudOK = false;   // 読込成功前は書き込まない（空上書き事故の防止・bnavと同じ保護）
 let timer = null;
 
-const refOf = u => doc(db, 'users', u.uid, 'apps', 'yoyu_v3');
+// ルール(match /users/{uid})が許可するのは本体ドキュメントのみ→フィールド相乗り方式（merge:trueでbnavデータ保護）
+const refOf = u => doc(db, 'users', u.uid);
 const btnS = 'margin-left:8px;font:inherit;font-size:11px;font-weight:700;padding:4px 12px;border-radius:99px;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.12);color:#fff;cursor:pointer';
 const statS = 'margin-left:8px;font-size:10.5px;opacity:.8';
 
@@ -701,7 +702,7 @@ window.cloudPush = (s)=>{
   clearTimeout(timer);
   timer = setTimeout(async ()=>{
     try{
-      await setDoc(refOf(user), {S:s, updatedAt: s.updatedAt || Date.now()});
+      await setDoc(refOf(user), {yoyu_v3: {S:s, updatedAt: s.updatedAt || Date.now()}}, {merge:true});
       stat('☁ 同期済み ' + new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}));
     }catch(e){ stat('⚠ 同期失敗（データは端末に保持）'); }
   }, 800);
@@ -720,8 +721,8 @@ onAuthStateChanged(auth, async (u)=>{
     const snap = await getDoc(refOf(u));
     cloudOK = true;
     const local = JSON.parse(localStorage.getItem('yoyu_v3')||'{}');
-    if(snap.exists()){
-      const c = snap.data();
+    if(snap.exists() && snap.data().yoyu_v3){
+      const c = snap.data().yoyu_v3;
       if((c.updatedAt||0) > (local.updatedAt||0)){ window.applyCloud(c.S); stat('☁ クラウドから復元'); }
       else { window.cloudPush(local); }
     } else {
