@@ -7,11 +7,12 @@
 <title>よゆうシミュ v3 — 人生のお金の地図</title>
 <style>
   :root {
-    --navy:#1e2a4a; --blue:#3563e9; --sky:#eef3ff; --ink:#25304a;
-    --safe:#16a34a; --warn:#d97706; --bad:#dc2626; --line:#dfe6f3;
+    --navy:#66805a; --blue:#66805a; --sky:#eef2e6; --ink:#4b4a42;
+    --safe:#5d8a4e; --warn:#c98a3d; --bad:#c25e4c; --line:#e6e2d4;
+    --terra:#d98d5f; --sage:#9dbb8b; --softblue:#a8c0dd; --cream:#f6f4ed;
   }
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;background:#f6f8fd;color:var(--ink);line-height:1.7}
+  body{font-family:-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;background:var(--cream);color:var(--ink);line-height:1.7}
   .wrap{max-width:960px;margin:0 auto;padding:0 14px}
   header.app{background:var(--navy);color:#fff;padding:14px 0}
   header.app .wrap{display:flex;align-items:baseline;gap:12px}
@@ -20,8 +21,63 @@
   header.app .sub{font-size:.75rem;opacity:.75;margin-left:auto}
 
 
+
+  /* ══ ari-mama風ダッシュボード ══ */
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+  @media(max-width:860px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:0 3px 10px rgba(90,85,60,.06)}
+  .kpi .lbl{font-size:.68rem;font-weight:800;color:#8a8672;letter-spacing:.04em}
+  .kpi .row{display:flex;align-items:center;gap:8px;margin-top:4px}
+  .kpi .num{font-size:1.6rem;font-weight:900;line-height:1.2}
+  .kpi .num small{font-size:.72rem;font-weight:700;color:#8a8672}
+  .kpi .badge{margin-left:auto;text-align:center;background:var(--sky);border-radius:10px;padding:4px 10px;font-weight:900}
+  .kpi .badge b{display:block;font-size:1.3rem;line-height:1.1}
+  .kpi .badge small{font-size:.56rem;font-weight:700;color:#6f8261}
+  .kpi .sub{font-size:.63rem;color:#9a957f;margin-top:3px}
+  .kpi .pill{display:inline-block;font-size:.66rem;font-weight:800;border-radius:7px;padding:1px 8px;margin-top:3px}
+  .pill.ok{background:#e6efdd;color:#4c7040}.pill.ng{background:#f6e3dc;color:#b05a44}
+  .gA{color:#4c7040}.gB{color:#6f8f4f}.gC{color:#c98a3d}.gD{color:#c25e4c}
+  .meterbox{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:12px;box-shadow:0 3px 10px rgba(90,85,60,.06);display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  .meterbox .mtitle{font-size:.78rem;font-weight:900;color:#6b6753;width:100%}
+  .mbar{flex:1;min-width:260px}
+  .mbar .bar{display:flex;height:26px;border-radius:8px;overflow:hidden;font-size:.6rem;color:#fff;font-weight:800}
+  .mbar .bar div{display:flex;align-items:center;justify-content:center;white-space:nowrap;overflow:hidden}
+  .mbar .segs{display:flex;gap:18px;margin-top:8px;font-size:.72rem;flex-wrap:wrap}
+  .mbar .segs b{font-size:.95rem}
+  .mbar .segs i{display:inline-block;width:9px;height:9px;border-radius:99px;margin-right:5px}
+  .mgrade{text-align:center;background:var(--sky);border-radius:12px;padding:10px 22px;font-weight:900}
+  .mgrade b{display:block;font-size:2rem;line-height:1.1}
+  .mgrade small{font-size:.62rem;color:#6f8261}
+  .subkpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;background:#f4f2ea;border-radius:10px;padding:12px;margin:10px 0}
+  @media(max-width:860px){.subkpis{grid-template-columns:repeat(2,1fr)}}
+  .subkpi .l{font-size:.66rem;font-weight:800;color:#8a8672}
+  .subkpi .v{font-size:1.2rem;font-weight:900}
+  .subkpi .v small{font-size:.68rem;color:#8a8672}
+  .improve-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:12px;margin-top:12px}
+  @media(max-width:860px){.improve-grid{grid-template-columns:1fr}}
+  .impbox{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:0 3px 10px rgba(90,85,60,.06)}
+  .impbox h3{font-size:.82rem;margin-bottom:8px;color:#6b6753}
+  .imp-row{display:flex;align-items:center;gap:8px;font-size:.76rem;font-weight:700;margin:7px 0;flex-wrap:wrap}
+  .imp-row .cap{background:#e9efdf;border-radius:7px;padding:3px 9px;font-size:.68rem}
+  .imp-row.exp .cap{background:#f3ead9}
+  .imp-row input{width:76px;padding:5px 7px;border:1.5px solid var(--line);border-radius:8px;font:inherit;font-weight:800;text-align:right;background:#fbfaf5}
+  .imp-out{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+  .imp-out .cell{background:#f4f2ea;border-radius:10px;padding:9px 12px}
+  .imp-out .cell .l{font-size:.65rem;font-weight:800;color:#8a8672}
+  .imp-out .cell .v{font-size:1.25rem;font-weight:900}
+  .imp-out .cell .d{font-size:.72rem;font-weight:900}
+  .d.up{color:#4c7040}.d.dn{color:#c25e4c}.d.flat{color:#9a957f}
+  .diag-head{display:flex;align-items:center;gap:10px}
+  .diag-head .leaf{font-size:1.3rem}
+  .diag-head h4{font-size:1.05rem;font-weight:900}
+  .diag-head .score{margin-left:auto;font-weight:900;font-size:1.3rem;background:var(--sky);border-radius:9px;padding:3px 12px}
+  .diag-head .score small{font-size:.65rem;color:#8a8672}
+  .diag-body{font-size:.78rem;margin-top:8px;line-height:1.75}
+  .diag-hint{background:#eef3e6;border-radius:10px;padding:9px 12px;font-size:.74rem;margin-top:9px}
+  .diag-hint b{display:block;font-size:.7rem;color:#5d7a4e;margin-bottom:2px}
+  .diag-dog{float:right;font-size:2.4rem;margin-left:8px}
   /* ══ 一生涯収支（LifeNAVI風） ══ */
-  .ln-strip{display:flex;flex-wrap:wrap;gap:18px;align-items:center;background:#2aa8a2;color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:14px}
+  .ln-strip{display:flex;flex-wrap:wrap;gap:18px;align-items:center;background:#7d9a6c;color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:14px}
   .ln-strip .who{display:flex;align-items:center;gap:8px;font-weight:800;font-size:1.02rem}
   .ln-strip .who small{font-weight:600;opacity:.85;display:block;font-size:.68rem}
   .ln-strip .meta{margin-left:auto;font-size:.7rem;opacity:.9;text-align:right;line-height:1.5}
@@ -29,8 +85,8 @@
   @media(max-width:860px){.ln-grid{grid-template-columns:1fr}}
   .ln-panel{background:#fff;border:1px solid #e8ecf4;border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
   .ln-head{padding:12px;text-align:center;color:#fff;font-weight:900;font-size:1.05rem;letter-spacing:.06em}
-  .ln-head.inc{background:linear-gradient(135deg,#f6a41f,#f28c1e)}
-  .ln-head.exp{background:linear-gradient(135deg,#f07f3c,#e9612e)}
+  .ln-head.inc{background:linear-gradient(135deg,#d9a648,#cf9139)}
+  .ln-head.exp{background:linear-gradient(135deg,#d98a5f,#c9744a)}
   .ln-body{padding:14px 16px;flex:1}
   .ln-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}
   .ln-row .nm{font-weight:800;font-size:.88rem;min-width:7.5em}
@@ -65,9 +121,9 @@
   .togglerow{display:flex;gap:10px;align-items:center;margin-top:14px;font-weight:700}
   .togglerow input{width:20px;height:20px}
 
-  #results{position:sticky;top:0;z-index:50;background:linear-gradient(180deg,#f6f8fd 82%,rgba(246,248,253,0));padding:12px 0 6px}
+  #results{padding:12px 0 6px}
   .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-  .rcard{background:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 6px 18px rgba(30,42,74,.08);border-top:4px solid var(--blue)}
+  .rcard{background:#fff;border-radius:12px;padding:12px 14px;border:1px solid var(--line);box-shadow:0 3px 10px rgba(90,85,60,.06);border-top:4px solid var(--blue)}
   .rcard .lbl{font-size:.7rem;color:#7b87a3;font-weight:700}
   .rcard .val{font-size:1.45rem;font-weight:800}
   .rcard .val small{font-size:.8rem;font-weight:600;color:#7b87a3}
@@ -169,33 +225,25 @@
 <div class="wrap">
 
   <div id="results">
-    <div class="cards">
-      <div class="rcard" id="c_room">
-        <div class="lbl">🏠 住居費はいくらまでOK？</div>
-        <div class="val" id="v_room">—<small> 万円/月</small></div>
-        <div class="note">教育・老後・車の積立を確保したうえでの上限</div>
-      </div>
-      <div class="rcard" id="c_yoyu">
-        <div class="lbl">😊 今の余裕</div>
-        <div class="val" id="v_yoyu">—<small> 万円/月</small></div>
-        <div class="note">収入 − 生活費 − 住居費 − 子ども費 − 車</div>
-      </div>
-      <div class="rcard" id="c_last">
-        <div class="lbl">⏳ 資産が尽きる年齢（中立）</div>
-        <div class="val" id="v_last">—</div>
-        <div class="note">90歳超なら「尽きない」</div>
-      </div>
-    </div>
+    <div class="kpis" id="kpicards"></div>
   </div>
 
+  <div class="meterbox" id="yohaku"></div>
+
   <div class="chartbox">
-    <h3>90歳までの資産カーブ <span class="approx">概算</span></h3>
-    <div class="legend"><span><i style="background:#93b0f5"></i>楽観 5%</span><span><i style="background:#3563e9"></i>中立 3%</span><span><i style="background:#9aa5be"></i>悲観 1%</span></div>
-    <canvas id="chart" width="900" height="230"></canvas>
+    <h3>資産推移シミュレーション <span class="approx">概算</span></h3>
+    <div class="subkpis" id="simkpis"></div>
+    <div class="legend"><span><i style="background:var(--softblue);height:9px"></i>収入</span><span><i style="background:var(--sage);height:9px"></i>支出</span><span><i style="background:var(--terra)"></i>資産予測（中立3%）</span><span><i style="background:var(--terra);opacity:.5"></i>改善後（点線）</span></div>
+    <canvas id="chart" width="940" height="260"></canvas>
   </div>
 
   <!-- 家計の通信簿: MF実績×目標支出率（資産カーブ直下・Hiroka要望 2026-07-05） -->
   <div class="cards" id="budgetcards" style="margin-top:12px; display:none"></div>
+
+  <div class="improve-grid">
+    <div class="impbox" id="impactbox"></div>
+    <div class="impbox" id="diagbox"></div>
+  </div>
 
   <div class="tabs">
     <button class="tab" data-p="p_past">📜 これまで</button>
@@ -216,6 +264,10 @@
 
   <!-- 📍 いま: 現在の暮らし -->
   <div class="panel on" id="p_now">
+    <div class="cards" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
+      <div class="rcard" id="c_room"><div class="lbl">🏠 住居費はいくらまでOK？</div><div class="val" id="v_room">—<small> 万円/月</small></div><div class="note">教育・老後・車の積立を確保したうえでの上限</div></div>
+      <div class="rcard" id="c_yoyu"><div class="lbl">😊 今の余裕</div><div class="val" id="v_yoyu">—<small> 万円/月</small></div><div class="note">収入 − 生活費 − 住居費 − 子ども費 − 車</div></div>
+    </div>
     <div class="frow"><label>あなたの手取り月収</label><input type="number" id="i_mynet" step="0.5"><span>万円/月</span></div>
     <div class="frow"><label>配偶者の働き方<small>保育園の入りやすさ・保育料の自動判定に使うで</small></label>
       <select id="i_spwork">
@@ -303,7 +355,7 @@ const DEF = {
   rent:8.5, rentTry:8.5, city:'名古屋市',
   kids:[{birth:'2024-05', stages:{...{sho:'pub',chu:'pub',kou:'pub',dai:'pub',grad:'none'}}, care:'auto', careFee:7.0}],
   car:{has:true, monthly:2.0, every:10, cost:250},
-  oldGoal:2000, pension:20, retire:65, events:[], targetExpRate:90, sevMe:500, sevSp:0, medCare:1200
+  oldGoal:2000, pension:20, retire:65, events:[], targetExpRate:90, sevMe:500, sevSp:0, medCare:1200, imp:{inc:0,gen:0,sen:0,care:0}
 };
 let S = load();
 function load(){
@@ -483,7 +535,8 @@ function yoyu(rent){ return netTotal() - S.living - rent - kidsCostNow() - (S.ca
 function roomMax(){
   return netTotal() - S.living - kidsCostNow() - eduMonthlyNeed() - oldMonthlyNeed() - carMonthly();
 }
-function simulate(r){
+function simulate(r, adj){
+  adj=adj||{};
   let a=S.assets; const out=[]; const startAge=myAge();
   const events=S.events.slice().sort((x,y)=>x.year-y.year);
   let rent=S.rentTry;
@@ -491,7 +544,7 @@ function simulate(r){
   let incMe=S.myNet;
   let incSp=(S.spouseWork==='part'||S.spouseWork==='full')?S.spouseNet:0;
   const setInc=(who,v)=>{ if(who==='spouse') incSp=v; else incMe=v; };
-  for(let age=startAge; age<=90; age++){
+  for(let age=startAge; age<=105; age++){
     const yearNow = new Date().getFullYear() + (age - startAge);
     for(const ev of events){
       if(ev.year===yearNow){
@@ -515,13 +568,50 @@ function simulate(r){
     let inc, exp;
     if(age < S.retire){ inc=net + S.bonus/12; exp=S.living+rent+kidsC+carM; }
     else { inc=S.pension; exp=S.living*0.85 + rent + carM; }
+    if(age>=75) exp += (S.medCare||0)/(15*12);   // ケア期(75歳〜)に医療・介護予備費を按分
+    if(adj.inc && age<S.retire) inc += adj.inc/12;   // 改善インパクト: 収入+（現役期）
+    if(age<S.retire)      exp -= (adj.gen||0)/12;    // 支出改善: 現役期
+    else if(age<75)       exp -= (adj.sen||0)/12;    //           アクティブシニア期
+    else                  exp -= (adj.care||0)/12;   //           ケア期
     a = a*(1+r) + (inc-exp)*12;
-    out.push({age, a});
-    if(a< -3000){ for(let x=age+1;x<=90;x++) out.push({age:x,a:-3000}); break; }
+    out.push({age, a, inc:inc*12, exp:exp*12});
+    if(a< -3000){ for(let x=age+1;x<=105;x++) out.push({age:x,a:-3000,inc:0,exp:0}); break; }
   }
   return out;
 }
 function lastAge(){ const s=simulate(0.03); const hit=s.find(p=>p.a<0); return hit? hit.age : null; }
+
+// ══════ ari-mama風ダッシュボード指標 ══════
+const LIFESPAN=90;                                  // 想定寿命
+function grade(v,steps){ for(const [th,g] of steps) if(v>=th) return g; return steps[steps.length-1][1]; }
+function kpiPack(adj){
+  const sim=simulate(0.03, adj);
+  const zero=sim.find(p=>p.a<0);       const lifeAge = zero? zero.age : null;      // 資産寿命
+  const u5=sim.find(p=>p.a<500);       const u500Age = u5? u5.age : null;          // 500万を下回る年齢
+  // 収支が2年連続でマイナスになる最初の年
+  let minusAge=null;
+  for(let i=0;i<sim.length-1;i++) if(sim[i].inc<sim[i].exp && sim[i+1].inc<sim[i+1].exp){ minusAge=sim[i].age; break; }
+  // 退職時の必要資産額 = 退職後〜想定寿命の累計赤字（運用ゼロの保守見積）
+  let need=0; sim.forEach(p=>{ if(p.age>=S.retire && p.age<=LIFESPAN) need += Math.max(0, p.exp-p.inc); });
+  const atRe = sim.find(p=>p.age===S.retire);
+  const retireAsset = atRe? atRe.a : S.assets;
+  const margin = retireAsset - need;
+  // 生活防衛力 = いまの資産 ÷ いまの月支出
+  const nowExpM = sim[0].exp/12;
+  const guardM = nowExpM>0 ? S.assets/nowExpM : 99;
+  // 年金カバー率 = 年金 ÷ 老後の月支出
+  const oldExpM = S.living*0.85 + S.rentTry + (S.car.has?S.car.monthly:0) + (S.medCare||0)/(15*12);
+  const cover = oldExpM>0 ? S.pension/oldExpM*100 : 0;
+  // ピーク・退職時・ケア期突入時
+  let peak=sim[0]; sim.forEach(p=>{ if(p.a>peak.a) peak=p; });
+  const at75 = sim.find(p=>p.age===75);
+  // 人生の余白 3期間
+  const startAge=sim[0].age;
+  const yutori = (minusAge??LIFESPAN) - startAge;                                   // 収支プラスの期間
+  const sekkei = Math.max(0, (u500Age??LIFESPAN) - (minusAge??LIFESPAN));           // 取り崩し設計期間
+  const mamori = Math.max(0, Math.min(lifeAge??LIFESPAN,LIFESPAN) - (u500Age??LIFESPAN)); // 500万未満の期間
+  return {sim,lifeAge,u500Age,minusAge,need,retireAsset,margin,guardM,cover,peak,at75,yutori,sekkei,mamori,startAge};
+}
 
 
 // ══════ 🧾 一生涯収支（LifeNAVI風）══════
@@ -622,6 +712,104 @@ function renderLife(){
   const md=document.getElementById('ln_med');  if(md) md.onchange=()=>{S.medCare=+md.value||0;save();renderLife();};
 }
 
+
+// ══════ ari-mama風ダッシュボード描画 ══════
+function impAdj(){ const i=S.imp||{}; return {inc:+i.inc||0, gen:+i.gen||0, sen:+i.sen||0, care:+i.care||0}; }
+function hasImp(){ const a=impAdj(); return a.inc||a.gen||a.sen||a.care; }
+function renderDashboard(){
+  const K=kpiPack();                       // 基準
+  const gG=grade(K.guardM,[[12,'A'],[6,'B'],[3,'C'],[-99,'D']]);
+  const gC=grade(K.cover,[[100,'A'],[85,'B'],[70,'C'],[-99,'D']]);
+  const lifeTxt = K.lifeAge? K.lifeAge : '105+';
+  const lifeDiff = (K.lifeAge??105)-LIFESPAN;
+  const u5Txt = K.u500Age? K.u500Age : '105+';
+  const gY = K.yutori>=25&&K.mamori<=5 ?'A': K.yutori>=15?'B': K.yutori>=5?'C':'D';
+  // ── KPIカード5枚 ──
+  document.getElementById('kpicards').innerHTML=
+   `<div class="kpi"><div class="lbl">資産寿命</div><div class="row"><span class="num">${lifeTxt}<small> 歳</small></span>
+      <span class="badge"><b class="${lifeDiff>=0?'gA':'gD'}">${lifeDiff>=0?'+':''}${lifeDiff}</b><small>想定寿命${LIFESPAN}歳比</small></span></div>
+      <div class="sub">資産がゼロになる年齢（中立3%）</div></div>`+
+   `<div class="kpi"><div class="lbl">500万円を下回る年齢</div><div class="row"><span class="num">${u5Txt}<small> 歳</small></span></div>
+      <div class="sub">資産の余裕が小さくなり始める目安</div></div>`+
+   `<div class="kpi"><div class="lbl">退職時の必要資産額</div><div class="row"><span class="num">${fmt(Math.max(0,Math.round(K.need)))}<small> 万円</small></span></div>
+      <span class="pill ${K.margin>=0?'ok':'ng'}">${fmt(Math.abs(Math.round(K.margin)))}万円 ${K.margin>=0?'余裕':'不足'}</span></div>`+
+   `<div class="kpi"><div class="lbl">生活防衛力</div><div class="row"><span class="num">${fmt(Math.round(K.guardM*10)/10)}<small> ヶ月</small></span>
+      <span class="badge"><b class="g${gG}">${gG}</b><small>${gG<='B'?'安心':'要強化'}</small></span></div>
+      <div class="sub">いまの資産 ÷ いまの月支出</div></div>`+
+   `<div class="kpi"><div class="lbl">年金カバー率</div><div class="row"><span class="num">${fmt(Math.round(K.cover*10)/10)}<small> %</small></span>
+      <span class="badge"><b class="g${gC}">${gC}</b><small>${gC==='A'?'年金で足りる':'資産で補う'}</small></span></div>
+      <div class="sub">年金 ÷ 老後の月支出</div></div>`;
+  // ── 人生余白メーター ──
+  const tot=Math.max(1,K.yutori+K.sekkei+K.mamori);
+  const seg=(y,c,l)=> y>0?`<div style="width:${y/tot*100}%;background:${c}" title="${l}">${y/tot>0.18?l:''}</div>`:'';
+  document.getElementById('yohaku').innerHTML=
+   `<div class="mtitle">人生余白メーター <span class="approx">概算</span></div>
+    <div class="mbar">
+      <div class="bar">${seg(K.yutori,'linear-gradient(90deg,#9dbb8b,#b8cba0)',(K.startAge)+'歳〜 収支安定・ゆとり期間')}${seg(K.sekkei,'linear-gradient(90deg,#e0b184,#d98d5f)',(K.minusAge??'')+'歳〜 収支悪化・設計期間')}${seg(K.mamori,'#c9a0a0','守り期間')}</div>
+      <div class="segs">
+        <span><i style="background:#9dbb8b"></i>ゆとり期間 <b>${K.yutori}</b> 年<br><small style="color:#8a8672">安心してお金を使える期間</small></span>
+        <span><i style="background:#d98d5f"></i>設計期間 <b>${K.sekkei}</b> 年<br><small style="color:#8a8672">資産の取り崩しが始まる期間</small></span>
+        <span><i style="background:#c9a0a0"></i>守り期間 <b>${K.mamori}</b> 年<br><small style="color:#8a8672">資産の余裕が小さくなる期間</small></span>
+      </div>
+    </div>
+    <div class="mgrade"><b class="g${gY}">${gY}</b><small>${gY<='B'?'安心':'見直し'}</small></div>`;
+  // ── 資産推移サブKPI ──
+  document.getElementById('simkpis').innerHTML=
+   `<div class="subkpi"><div class="l">最大資産ピーク年齢</div><div class="v">${K.peak.age}<small> 歳</small> ${fmt(Math.round(K.peak.a))}<small> 万円</small></div></div>`+
+   `<div class="subkpi"><div class="l">退職時（${S.retire}歳）の資産額</div><div class="v">${fmt(Math.round(K.retireAsset))}<small> 万円</small></div></div>`+
+   `<div class="subkpi"><div class="l">収支がマイナスになる年<br><small style="font-weight:600;color:#9a957f">2年連続でマイナスになる1年目</small></div><div class="v">${K.minusAge??'なし'}<small>${K.minusAge?' 歳':''}</small></div></div>`+
+   `<div class="subkpi"><div class="l">ケア期突入時（75歳）の資産残高</div><div class="v">${K.at75?fmt(Math.round(K.at75.a)):'—'}<small> 万円</small></div></div>`;
+  renderImpact(K); renderDiag(K);
+}
+// ── 改善インパクト（what-if） ──
+function renderImpact(K){
+  const box=document.getElementById('impactbox'); if(!box) return;
+  const a=impAdj();
+  const K2=hasImp()? kpiPack(a) : K;
+  const dLife=((K2.lifeAge??105)-(K.lifeAge??105));
+  const dU5=((K2.u500Age??105)-(K.u500Age??105));
+  const dcls=d=> d>0?'up':d<0?'dn':'flat';
+  const dtxt=d=> (d>0?'+':'')+d+' 歳';
+  box.innerHTML=`<h3>💪 改善インパクト <span class="approx">収入・支出を変えたら未来はどう変わる？</span></h3>
+    <div class="imp-row"><span class="cap">収入改善</span>💼 収入を <input type="number" id="imp_inc" value="${a.inc||''}" step="10" placeholder="0"> 万円/年 増やす（現役期）</div>
+    <div class="imp-row exp"><span class="cap">支出改善</span>🏠 現役期 <input type="number" id="imp_gen" value="${a.gen||''}" step="6" placeholder="0"> 万円/年 減らす</div>
+    <div class="imp-row exp"><span class="cap">支出改善</span>🌿 シニア期 <input type="number" id="imp_sen" value="${a.sen||''}" step="6" placeholder="0"> 万円/年 減らす</div>
+    <div class="imp-row exp"><span class="cap">支出改善</span>🏥 ケア期 <input type="number" id="imp_care" value="${a.care||''}" step="6" placeholder="0"> 万円/年 減らす</div>
+    <div class="imp-out">
+      <div class="cell"><div class="l">資産寿命</div><div class="v">${K2.lifeAge??'105+'}<small> 歳</small></div><div class="d ${dcls(dLife)}">${hasImp()?dtxt(dLife):'—'}</div></div>
+      <div class="cell"><div class="l">500万円を下回る年齢</div><div class="v">${K2.u500Age??'105+'}<small> 歳</small></div><div class="d ${dcls(dU5)}">${hasImp()?dtxt(dU5):'—'}</div></div>
+    </div>
+    <p class="ln-note" style="margin-top:6px">月1万円の見直し=年12万円。減らす場合もプラスの数字を入れてな（グラフに点線で改善後カーブが出るで）</p>`;
+  for(const k of ['inc','gen','sen','care']){
+    const el=document.getElementById('imp_'+k);
+    el.onchange=()=>{ S.imp=S.imp||{}; S.imp[k]=+el.value||0; save(); renderDashboard(); drawChart(); };
+  }
+}
+// ── 家計タイプ診断 ──
+function renderDiag(K){
+  const box=document.getElementById('diagbox'); if(!box) return;
+  const now=K.sim[0]; const saveRate= now.inc>0? (now.inc-now.exp)/now.inc*100 : 0;
+  let sc=50;
+  sc += saveRate>=20?15: saveRate>=10?8: saveRate<0?-10:0;
+  sc += K.cover>=100?15: K.cover>=85?8: K.cover>=70?3:-5;
+  sc += K.guardM>=12?10: K.guardM>=6?5: K.guardM<3?-5:0;
+  sc += K.yutori>=20?10: K.yutori>=10?5:0;
+  sc=Math.max(5,Math.min(99,Math.round(sc)));
+  const type= sc>=80?['🌿','しっかり安心タイプ','資産形成が順調に進んでいます。この調子を保ちながら、余裕資金の活かし方（投資・自己投資・楽しみ）を考えられる段階です。']:
+             sc>=65?['🍃','バランス調整タイプ','現時点では大きな問題はありませんが、将来を見据えると資産の減少タイミングがやや早まる可能性があります。小さな調整でも長期的な安心度が大きく変わる段階にあります。']:
+             sc>=45?['🌱','これから整えるタイプ','家計の土台はありますが、老後に向けた備えに改善余地があります。固定費の見直しから始めると効果が出やすい段階です。']:
+                    ['🔧','まき直しタイプ','このままのペースだと資産の枯渇が早まる可能性があります。支出構造の見直しと収入アップの両面から立て直しを始めましょう。'];
+  const hints=[];
+  if(K.cover<85) hints.push('年金カバー率が低め。老後の固定費（住居費・保険）を軽くすると効きます');
+  if(K.guardM<6) hints.push('生活防衛資金を月支出6ヶ月分まで積み増しましょう');
+  if(saveRate<10) hints.push('貯蓄率10%が最初の目標。固定費や支出配分を見直し、優先度の低い支出を整えましょう');
+  if(!hints.length) hints.push('固定費や支出配分を定期的に見直し、余白期間を伸ばしていきましょう');
+  box.innerHTML=`<h3>🩺 家計タイプ診断</h3>
+    <div class="diag-head"><span class="leaf">${type[0]}</span><h4>${type[1]}</h4><span class="score">${sc}<small>/100</small></span></div>
+    <div class="diag-body"><span class="diag-dog">🐕</span>${type[2]}</div>
+    <div class="diag-hint"><b>💡 これからのヒント</b>${hints[0]}</div>`;
+}
+
 // ══════ 描画 ══════
 function fmt(x){ return (Math.round(x*10)/10).toLocaleString(); }
 function render(){
@@ -655,35 +843,49 @@ function render(){
   document.getElementById('c_room').className = 'rcard ' + (S.rentTry<=rm?'ok':'bad');
   document.getElementById('v_yoyu').innerHTML = fmt(yo) + '<small> 万円/月</small>';
   document.getElementById('c_yoyu').className = 'rcard ' + (yo>3?'ok':yo>0?'warn':'bad');
-  document.getElementById('v_last').textContent = la? la+' 歳' : '尽きない';
-  document.getElementById('c_last').className = 'rcard ' + (la? (la<80?'bad':'warn') : 'ok');
 
   document.getElementById('v_hoiku').textContent = fmt(kidsCostNow()) + ' 万円/月';
   const cares=S.kids.filter(k=>ageFrom(k.birth)>=0&&ageFrom(k.birth)<=2).map(k=>CARE_LABEL[careOf(k)].split('（')[0]);
   document.getElementById('care_note').textContent = cares.length? `0-2歳の保育形態: ${cares.join('・')}` : '0-2歳のお子さんなし';
   document.getElementById('v_edu').textContent = fmt(eduMonthlyNeed()) + ' 万円/月';
 
-  renderKidsNow(); renderKidsFuture(); renderEvents(); renderMF(); renderBudget(); renderLife(); drawChart();
+  renderKidsNow(); renderKidsFuture(); renderEvents(); renderMF(); renderBudget(); renderLife(); renderDashboard(); drawChart();
 }
 function drawChart(){
   const cv=document.getElementById('chart'); const ctx=cv.getContext('2d');
   const W=cv.width, H=cv.height; ctx.clearRect(0,0,W,H);
-  const startAge=myAge();
-  const series=[[0.05,'#93b0f5'],[0.03,'#3563e9'],[0.01,'#9aa5be']].map(([r,c])=>({data:simulate(r),c}));
-  const all=series.flatMap(s=>s.data.map(p=>p.a));
-  const maxA=Math.max(1000,...all), minA=Math.min(0,...all);
-  const x=age=>( (age-startAge)/(90-startAge) )*(W-60)+45;
-  const y=a=>H-24-((a-minA)/(maxA-minA))*(H-46);
-  ctx.strokeStyle='#e6294b22'; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(45,y(0)); ctx.lineTo(W-10,y(0)); ctx.stroke(); ctx.setLineDash([]);
-  ctx.fillStyle='#96a0b8'; ctx.font='11px sans-serif';
-  ctx.fillText('0円', 14, y(0)+4);
-  ctx.fillText(startAge+'歳', 40, H-6); ctx.fillText('65歳', x(65)-12, H-6); ctx.fillText('90歳', W-38, H-6);
-  ctx.fillText(Math.round(maxA).toLocaleString()+'万', 2, 16);
-  for(const s of series){
-    ctx.strokeStyle=s.c; ctx.lineWidth=s.c==='#3563e9'?2.5:1.5; ctx.beginPath();
-    s.data.forEach((p,i)=>{ const px=x(p.age), py=y(Math.max(p.a,minA)); i?ctx.lineTo(px,py):ctx.moveTo(px,py); });
-    ctx.stroke();
-  }
+  const base=simulate(0.03);
+  const imp=hasImp()? simulate(0.03, impAdj()) : null;
+  const startAge=base[0].age, endAge=105;
+  const L=48, R=54, B=26, T=14;
+  const x=age=>L+((age-startAge)/(endAge-startAge))*(W-L-R);
+  // 左軸: 収支（万円/年） 右軸: 資産（万円）
+  const maxFlow=Math.max(100,...base.map(p=>Math.max(p.inc,p.exp)))*1.1;
+  const allA=base.map(p=>p.a).concat(imp?imp.map(p=>p.a):[]);
+  const maxA=Math.max(1000,...allA)*1.05, minA=Math.min(0,...allA);
+  const yF=v=>H-B-(v/maxFlow)*(H-B-T);
+  const yA=v=>H-B-((v-minA)/(maxA-minA))*(H-B-T);
+  // 罫線・軸ラベル
+  ctx.strokeStyle='#eceadf'; ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){ const yy=T+(H-B-T)*i/4; ctx.beginPath(); ctx.moveTo(L,yy); ctx.lineTo(W-R,yy); ctx.stroke(); }
+  ctx.fillStyle='#9a957f'; ctx.font='10px sans-serif';
+  for(let i=0;i<=4;i++){ const yy=T+(H-B-T)*i/4;
+    ctx.textAlign='right'; ctx.fillText(Math.round(maxFlow*(4-i)/4).toLocaleString(), L-5, yy+3);
+    ctx.textAlign='left';  ctx.fillText(Math.round((minA+(maxA-minA)*(4-i)/4)).toLocaleString(), W-R+5, yy+3); }
+  ctx.textAlign='center';
+  for(let a2=Math.ceil(startAge/10)*10; a2<=endAge; a2+=10) ctx.fillText(a2+'歳', x(a2), H-8);
+  // 資産0ライン（右軸基準）
+  ctx.strokeStyle='#c25e4c55'; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(L,yA(0)); ctx.lineTo(W-R,yA(0)); ctx.stroke(); ctx.setLineDash([]);
+  // 棒: 収入・支出
+  const n=base.length, slot=(W-L-R)/n, bw=Math.max(1.5,slot*0.32);
+  base.forEach(p=>{ const cx=x(p.age);
+    ctx.fillStyle='#a8c0dd'; ctx.fillRect(cx-bw-0.5, yF(p.inc), bw, H-B-yF(p.inc));
+    ctx.fillStyle='#9dbb8b'; ctx.fillRect(cx+0.5,   yF(p.exp), bw, H-B-yF(p.exp)); });
+  // 線: 資産（改善後は点線）
+  const line=(data,dash)=>{ ctx.strokeStyle='#d98d5f'; ctx.lineWidth=2.4; ctx.setLineDash(dash);
+    ctx.beginPath(); data.forEach((p,i)=>{ const px=x(p.age), py=yA(Math.max(p.a,minA)); i?ctx.lineTo(px,py):ctx.moveTo(px,py); }); ctx.stroke(); ctx.setLineDash([]); };
+  line(base,[]); if(imp) line(imp,[6,5]);
+  ctx.fillStyle='#9a957f'; ctx.textAlign='left'; ctx.fillText('万円/年', 4, 11); ctx.textAlign='right'; ctx.fillText('資産(万円)', W-4, 11);
 }
 
 // ══════ 入り口ゲート ══════
