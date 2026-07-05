@@ -19,6 +19,37 @@
   header.app .ver{font-size:.72rem;background:var(--blue);border-radius:99px;padding:2px 10px}
   header.app .sub{font-size:.75rem;opacity:.75;margin-left:auto}
 
+
+  /* ══ 一生涯収支（LifeNAVI風） ══ */
+  .ln-strip{display:flex;flex-wrap:wrap;gap:18px;align-items:center;background:#2aa8a2;color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:14px}
+  .ln-strip .who{display:flex;align-items:center;gap:8px;font-weight:800;font-size:1.02rem}
+  .ln-strip .who small{font-weight:600;opacity:.85;display:block;font-size:.68rem}
+  .ln-strip .meta{margin-left:auto;font-size:.7rem;opacity:.9;text-align:right;line-height:1.5}
+  .ln-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:860px){.ln-grid{grid-template-columns:1fr}}
+  .ln-panel{background:#fff;border:1px solid #e8ecf4;border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+  .ln-head{padding:12px;text-align:center;color:#fff;font-weight:900;font-size:1.05rem;letter-spacing:.06em}
+  .ln-head.inc{background:linear-gradient(135deg,#f6a41f,#f28c1e)}
+  .ln-head.exp{background:linear-gradient(135deg,#f07f3c,#e9612e)}
+  .ln-body{padding:14px 16px;flex:1}
+  .ln-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}
+  .ln-row .nm{font-weight:800;font-size:.88rem;min-width:7.5em}
+  .ln-row .nm small{display:block;font-weight:600;color:#7b87a3;font-size:.66rem}
+  .ln-box{min-width:104px;text-align:center;border:1.5px solid #dfe5f0;border-radius:9px;overflow:hidden;background:#fff}
+  .ln-box b{display:block;font-size:.62rem;color:#fff;padding:3px 6px;letter-spacing:.04em}
+  .ln-box span{display:block;font-weight:900;font-size:1.06rem;padding:5px 8px}
+  .ln-box span small{font-weight:700;font-size:.62rem;color:#7b87a3}
+  .ln-box.b1 b{background:#3e6bd6}.ln-box.b2 b{background:#e05d4e}.ln-box.b3 b{background:#2f9e6e}.ln-box.b4 b{background:#5b8def}
+  .ln-note{font-size:.68rem;color:#7b87a3}
+  .ln-sub{background:#f4f6fb;border-radius:10px;padding:10px 12px;margin:10px 0}
+  .ln-total{margin-top:auto;text-align:center;padding:14px;border-top:2px dashed #edf0f7;font-weight:900;font-size:1.05rem}
+  .ln-total .big{font-size:1.9rem;letter-spacing:.02em}
+  .ln-total.inc{color:#f2941d}.ln-total.exp{color:#e9612e}
+  .ln-result{margin-top:14px;background:#fff;border:1px solid #e8ecf4;border-radius:14px;padding:18px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;font-weight:900}
+  .ln-result .tag{color:#fff;border-radius:8px;padding:6px 12px;font-size:.8rem}
+  .ln-result .big{font-size:2.2rem}
+  .ln-result .plus{color:#1d9e63}.ln-result .minus{color:#d94b3f}
+  .ln-inp{width:84px;padding:4px 6px;border:1.5px solid #dfe5f0;border-radius:8px;font:inherit;font-weight:800;text-align:right}
   #wizard{max-width:560px;margin:40px auto;background:#fff;border-radius:18px;box-shadow:0 10px 30px rgba(30,42,74,.1);padding:30px 26px}
   #wizard h2{font-size:1.2rem;margin-bottom:4px}
   #wizard .step{font-size:.75rem;color:var(--blue);font-weight:700;letter-spacing:.1em}
@@ -170,6 +201,7 @@
     <button class="tab" data-p="p_past">📜 これまで</button>
     <button class="tab on" data-p="p_now">📍 いま</button>
     <button class="tab" data-p="p_future">🔭 これから</button>
+    <button class="tab" data-p="p_life">🧾 一生涯収支</button>
     <span style="font-size:.75rem;color:#96a0b8;align-self:center">設定は全部このタブ内で直せるで</span><button class="backwiz" style="margin-left:auto" onclick="if(confirm('最初の3問からやり直す？（入力値は保持されたままウィザードに戻る）')){S.setup=false;window.wizActive=true;save();render()}">⟲ 3問からやり直す</button>
   </div>
 
@@ -250,6 +282,11 @@
     <div id="events"></div>
   </div>
 
+  <!-- 🧾 一生涯収支（LifeNAVI風・マネフォ実績連動） -->
+  <div class="panel" id="p_life">
+    <div id="lifeview"></div>
+  </div>
+
 </div>
 </div>
 
@@ -266,7 +303,7 @@ const DEF = {
   rent:8.5, rentTry:8.5, city:'名古屋市',
   kids:[{birth:'2024-05', stages:{...{sho:'pub',chu:'pub',kou:'pub',dai:'pub',grad:'none'}}, care:'auto', careFee:7.0}],
   car:{has:true, monthly:2.0, every:10, cost:250},
-  oldGoal:2000, pension:20, retire:65, events:[], targetExpRate:90
+  oldGoal:2000, pension:20, retire:65, events:[], targetExpRate:90, sevMe:500, sevSp:0, medCare:1200
 };
 let S = load();
 function load(){
@@ -486,6 +523,105 @@ function simulate(r){
 }
 function lastAge(){ const s=simulate(0.03); const hit=s.find(p=>p.a<0); return hit? hit.age : null; }
 
+
+// ══════ 🧾 一生涯収支（LifeNAVI風）══════
+const LIFE_END=90;
+function mfLivingAvg(){ // MF実績から住宅・自動車・教育系を除いた月平均（万円）
+  const months=Object.keys(S.mf||{}).filter(m=>S.mf[m]&&mfExpTotal(m));
+  if(!months.length) return null;
+  const ex=['住宅','自動車','教養・教育'];
+  const t=months.reduce((s,m)=>s+MF_CATS.reduce((a,c)=>a+(ex.includes(c)?0:(+S.mf[m].cats[c]||0)),0),0);
+  return t/months.length/10000;
+}
+function childAllowanceTotal(){ // 児童手当 概算（2024年新制度: 0-2歳1.5万/3歳-18歳1万/第3子以降3万）
+  return S.kids.reduce((s,k,i)=>{
+    const a=ageFrom(k.birth); let t=0;
+    for(let x=Math.max(a,0); x<18; x++) t += (i>=2?3 : x<3?1.5 : 1)*12;
+    return s+t;
+  },0);
+}
+function kidEduTotal(k){ // 1人分の今後の教育・保育費 概算（万円）
+  const a=ageFrom(k.birth), ai=annualIncome(); let t=0;
+  for(let x=Math.max(a,0); x<18; x++) t += kidCost(x,S.city,ai,S.kids.indexOf(k),k)*12;
+  const st=k.stages||DEFAULT_STAGES;
+  if(a<19) t += STAGE_COST.dai[st.dai]||0;
+  if(a<23) t += STAGE_COST.grad[st.grad]||0;
+  return t;
+}
+function renderLife(){
+  const box=document.getElementById('lifeview'); if(!box) return;
+  const age=myAge(), wy=Math.max(0,S.retire-age), ly=LIFE_END-age, py=LIFE_END-65;
+  const hasSp=(S.spouseWork==='part'||S.spouseWork==='full');
+  // ── 収入 ──
+  const incMe=S.myNet*12*wy, incSp=hasSp?S.spouseNet*12*wy:0, incBonus=S.bonus*wy;
+  const pen=S.pension*12*py, allow=childAllowanceTotal();
+  const totalInc=incMe+incSp+incBonus+(+S.sevMe||0)+(+S.sevSp||0)+pen+allow+S.assets;
+  // ── 支出 ──
+  const mfAvg=mfLivingAvg();
+  const liv=(mfAvg??S.living);
+  const livTotal=liv*12*wy + liv*0.85*12*(ly-wy);
+  const rentTotal=S.rentTry*12*ly;
+  const eduTotal=S.kids.reduce((s,k)=>s+kidEduTotal(k),0);
+  const carBuy=S.car.has? Math.floor(ly/S.car.every)*S.car.cost:0;
+  const carKeep=S.car.has? S.car.monthly*12*ly:0;
+  const med=+S.medCare||0;
+  const totalExp=livTotal+rentTotal+eduTotal+carBuy+carKeep+med;
+  const diff=totalInc-totalExp;
+  const f=n=>Math.round(n).toLocaleString();
+  const KID_EMO=['👦','👧','🧒','🧒','🧒'];
+  const kidsStrip=S.kids.map((k,i)=>{const a=ageFrom(k.birth);return `<span class="who">${KID_EMO[i]||'🧒'} 第${'一二三四五'[i]||i+1}子<small>${a>=0?a+'才':'誕生前'}</small></span>`;}).join('');
+  box.innerHTML=`
+  <div class="ln-strip">
+    <span class="who">👤 あなた<small>${age}才</small></span>
+    ${hasSp||S.spouseWork==='home'?`<span class="who">🧑‍🤝‍🧑 配偶者<small>${S.spouseWork==='home'?'専業・育休':'就労中'}</small></span>`:''}
+    ${kidsStrip}
+    <span class="meta">一生涯の収入と支出を確認してみましょう！<br>※${LIFE_END}歳まで・リタイア${S.retire}歳 基準に計算<span class="approx" style="margin-left:6px">概算</span></span>
+  </div>
+  <div class="ln-grid">
+    <div class="ln-panel">
+      <div class="ln-head inc">💰 一生涯の総収入</div>
+      <div class="ln-body">
+        <div class="ln-sub"><div class="ln-row"><span class="nm">👤 あなた<small>${fmt(S.myNet)}万円/月 × ${wy}年</small></span>
+          <span class="ln-box b1"><b>手取り総額</b><span>${f(incMe)}<small> 万円</small></span></span>
+          <span class="ln-box b1"><b>退職金</b><span><input class="ln-inp" type="number" id="ln_sevme" value="${S.sevMe}" step="50"><small> 万円</small></span></span>
+        </div></div>
+        ${hasSp?`<div class="ln-sub"><div class="ln-row"><span class="nm">🧑‍🤝‍🧑 配偶者<small>${fmt(S.spouseNet)}万円/月 × ${wy}年</small></span>
+          <span class="ln-box b2"><b>手取り総額</b><span>${f(incSp)}<small> 万円</small></span></span>
+          <span class="ln-box b2"><b>退職金</b><span><input class="ln-inp" type="number" id="ln_sevsp" value="${S.sevSp}" step="50"><small> 万円</small></span></span>
+        </div></div>`:''}
+        <div class="ln-row"><span class="nm">🏦 年金の総額<small>世帯 ${fmt(S.pension)}万円/月 × 65〜${LIFE_END}歳</small></span><span class="ln-box b4"><b>年金総額</b><span>${f(pen)}<small> 万円</small></span></span></div>
+        <div class="ln-row"><span class="nm">🎁 ボーナス等<small>${fmt(S.bonus)}万円/年 × ${wy}年</small></span><span class="ln-box b4"><b>総額</b><span>${f(incBonus)}<small> 万円</small></span></span></div>
+        <div class="ln-row"><span class="nm">👶 児童手当<small>新制度・18歳まで</small></span><span class="ln-box b3"><b>総額</b><span>${f(allow)}<small> 万円</small></span></span></div>
+        <div class="ln-row"><span class="nm">💎 現在の金融資産<small>貯金・株など</small></span><span class="ln-box b3"><b>いまの資産</b><span>${f(S.assets)}<small> 万円</small></span></span></div>
+      </div>
+      <div class="ln-total inc">一生涯の総収入 <span class="big">${f(totalInc)}</span> 万円</div>
+    </div>
+    <div class="ln-panel">
+      <div class="ln-head exp">🛒 一生涯の総支出</div>
+      <div class="ln-body">
+        <div class="ln-row"><span class="nm">🍚 生活費<small>${mfAvg!=null?'マネフォ実績 月平均'+fmt(liv)+'万円':'毎月'+fmt(liv)+'万円'} × ${ly}年${mfAvg!=null?'（住宅・車・教育除く）':''}</small></span><span class="ln-box b2"><b>総額</b><span>${f(livTotal)}<small> 万円</small></span></span></div>
+        <div class="ln-row"><span class="nm">🏠 お住いの費用<small>住居費 ${fmt(S.rentTry)}万円/月 × ${ly}年</small></span><span class="ln-box b3"><b>総額</b><span>${f(rentTotal)}<small> 万円</small></span></span></div>
+        <div class="ln-row"><span class="nm">🎓 教育費<small>保育料＋小中高＋大学・院（進路プラン反映）</small></span><span class="ln-box b1"><b>総額</b><span>${f(eduTotal)}<small> 万円</small></span></span></div>
+        ${S.car.has?`<div class="ln-sub"><div class="ln-row"><span class="nm">🚗 お車の費用<small>買替え${S.car.every}年ごと＋維持費</small></span>
+          <span class="ln-box b4"><b>購入費総額</b><span>${f(carBuy)}<small> 万円</small></span></span>
+          <span class="ln-box b4"><b>維持費総額</b><span>${f(carKeep)}<small> 万円</small></span></span>
+        </div></div>`:''}
+        <div class="ln-row"><span class="nm">🏥 医療・介護 予備費<small>老後の施設・医療の備え（編集可）</small></span><span class="ln-box b2"><b>概算</b><span><input class="ln-inp" type="number" id="ln_med" value="${S.medCare}" step="100"><small> 万円</small></span></span></div>
+      </div>
+      <div class="ln-total exp">一生涯の総支出 <span class="big">${f(totalExp)}</span> 万円</div>
+    </div>
+  </div>
+  <div class="ln-result">
+    <span class="tag" style="background:#f2941d">一生涯の総収入</span> −
+    <span class="tag" style="background:#e9612e">一生涯の総支出</span> =
+    <span class="big ${diff>=0?'plus':'minus'}">${diff>=0?'+':''}${f(diff)}</span> 万円
+    <span class="ln-note" style="width:100%;text-align:center">プラスなら一生の見通しはOK。マイナスなら「これから」タブで住居費・教育・車を調整してみよう（すべて概算・投資リターンは含まない）</span>
+  </div>`;
+  const sm=document.getElementById('ln_sevme'); if(sm) sm.onchange=()=>{S.sevMe=+sm.value||0;save();renderLife();};
+  const ss=document.getElementById('ln_sevsp'); if(ss) ss.onchange=()=>{S.sevSp=+ss.value||0;save();renderLife();};
+  const md=document.getElementById('ln_med');  if(md) md.onchange=()=>{S.medCare=+md.value||0;save();renderLife();};
+}
+
 // ══════ 描画 ══════
 function fmt(x){ return (Math.round(x*10)/10).toLocaleString(); }
 function render(){
@@ -527,7 +663,7 @@ function render(){
   document.getElementById('care_note').textContent = cares.length? `0-2歳の保育形態: ${cares.join('・')}` : '0-2歳のお子さんなし';
   document.getElementById('v_edu').textContent = fmt(eduMonthlyNeed()) + ' 万円/月';
 
-  renderKidsNow(); renderKidsFuture(); renderEvents(); renderMF(); renderBudget(); drawChart();
+  renderKidsNow(); renderKidsFuture(); renderEvents(); renderMF(); renderBudget(); renderLife(); drawChart();
 }
 function drawChart(){
   const cv=document.getElementById('chart'); const ctx=cv.getContext('2d');
