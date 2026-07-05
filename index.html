@@ -68,6 +68,28 @@
   .gbtable th,.gbtable td{border:1px solid #ecdfc0;padding:6px 8px;text-align:center}
   .gbtable th{background:#f6efdd}
   .gbtable .ok{color:#4c7040;font-weight:900}.gbtable .ng{color:#c25e4c;font-weight:900}
+
+  /* ══ カテゴリ別月平均・ライフプランシート ══ */
+  .catavg{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 16px}
+  .catavg h4{font-size:.82rem;margin-bottom:8px;color:#6b6753}
+  .catrow{display:flex;align-items:center;gap:8px;font-size:.74rem;margin:3px 0}
+  .catrow .nm{width:7.5em;font-weight:700}
+  .catrow .bar{flex:1;height:12px;background:#f0ede2;border-radius:99px;overflow:hidden}
+  .catrow .bar i{display:block;height:100%;background:linear-gradient(90deg,#9dbb8b,#7d9a6c)}
+  .catrow .v{width:8.5em;text-align:right;font-weight:800}
+  .catrow .v small{color:#9a957f;font-weight:600}
+  .lps-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
+  table.lps{border-collapse:collapse;font-size:.7rem;white-space:nowrap}
+  .lps th,.lps td{border:1px solid #edeadf;padding:4px 7px;text-align:right;min-width:64px}
+  .lps th{background:#5e7355;color:#fff;font-weight:800;position:sticky;top:0}
+  .lps td:first-child,.lps th:first-child{position:sticky;left:0;background:#f4f2ea;text-align:left;font-weight:800;min-width:9em;z-index:2}
+  .lps th:first-child{background:#4d5f46;color:#fff;z-index:3}
+  .lps tr.ev td{background:#fdf8ec;text-align:center;font-size:.64rem;color:#8a6d3b}
+  .lps tr.inc td{background:#eef4fb}
+  .lps tr.exp td{background:#fdf3ef}
+  .lps tr.ast td{background:#eef3e6;font-weight:800}
+  .lps td.neg{color:#c25e4c}
+  .lps td.now{outline:2px solid #d98d5f;outline-offset:-2px}
   /* ══ ari-mama風ダッシュボード ══ */
   .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
   @media(max-width:860px){.kpis{grid-template-columns:repeat(2,1fr)}}
@@ -273,6 +295,7 @@
   <nav class="sidenav">
     <button class="navbtn on" data-page="page_diag">📊 診断結果<small>安心度・資産推移・改善</small></button>
     <button class="navbtn" data-page="page_life">🧾 一生涯収支<small>一生の総収入と総支出</small></button>
+    <button class="navbtn" data-page="page_sheet">📅 ライフプラン表<small>年表で人生とお金を一望</small></button>
     <button class="navbtn" data-page="page_input">✏️ 入力・設定<small>これまで・いま・これから</small></button>
   </nav>
 
@@ -315,6 +338,7 @@
     <h3 style="font-size:.92rem;margin:16px 0 6px">⚔️ 家計管理〜4つの敵〜 <span class="approx">リベ大式・MF実績から自動分類</span></h3>
     <p style="font-size:.72rem;color:#8a8672;margin-bottom:6px">1年間の支出を「毎月/不定期 × 固定/変動」の4つの敵に分けて抜け漏れなく把握するで。目標=<b>4つ全部の支出を手取りの8割以内</b>（残業代・ボーナス含まず）・2割は貯蓄・投資へ。</p>
     <div id="enemy4"></div>
+    <div class="catavg" id="catavg" style="display:none"></div>
     <h3 style="font-size:.92rem;margin:16px 0 6px">📒 収支リスト（マネーフォワード実績・2025/07〜2026/06）</h3>
     <p style="font-size:.75rem;color:#96a0b8;margin-bottom:8px">セルをクリックで手修正できるで。横スクロールで全月表示。</p>
     <div id="mftable" style="overflow-x:auto;border:1px solid var(--line);border-radius:12px"></div>
@@ -415,6 +439,25 @@
     <div id="lifeview"></div>
   </div>
   </div><!-- /page_life -->
+
+  <!-- 📅 ライフプランシート（年次一覧・イベント入力） -->
+  <div class="page" id="page_sheet">
+  <div class="panel" style="display:block">
+    <h3 style="font-size:.95rem;margin-bottom:4px">📅 ライフプランシート <span class="approx">中立3%・概算</span></h3>
+    <p style="font-size:.75rem;color:#8a8672;margin-bottom:8px">家族の年齢・ライフイベント・年ごとの収支と資産を1枚の年表で。イベントは下のボタンから追加できるで（年表に即反映）。</p>
+    <div class="add" style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">
+      <button class="chipbtn" onclick="addEvent('income','me')">💼 転職・昇給・減収</button>
+      <button class="chipbtn" onclick="addEvent('ikukyu','me')">🍼 育休をとる</button>
+      <button class="chipbtn" onclick="addEvent('quit','me')">🏢 会社をやめる</button>
+      <button class="chipbtn" onclick="addEvent('baby','family')">👶 出産</button>
+      <button class="chipbtn" onclick="addEvent('move','family')">🏠 引越し（家賃変更）</button>
+      <button class="chipbtn" onclick="addEvent('car','family')">🚗 車の購入</button>
+      <button class="chipbtn" onclick="addEvent('house','family')">🏡 住宅購入（頭金）</button>
+    </div>
+    <div class="lps-wrap" id="lifesheet"></div>
+    <p class="ln-note" style="margin-top:8px">進学の時期は生年月からの概算（4月区切りは考慮せず）。イベントの削除は「✏️入力・設定 → これから → 年表」でできるで。</p>
+  </div>
+  </div><!-- /page_sheet -->
 
   </div><!-- /pagearea -->
 </div>
@@ -834,6 +877,57 @@ function renderEnemy4(){
     <small style="font-size:.66rem;color:#9a957f">青=敵1 橙=敵2 紫=敵3 赤=敵4／バー全体=手取り8割ライン（世帯月収×12×0.8・ボーナス含まず）</small></div>`;
 }
 
+
+// ══════ 📊 カテゴリ別 月平均（MF実績） ══════
+function renderCatAvg(){
+  const box=document.getElementById('catavg'); if(!box) return;
+  const months=Object.keys(S.mf||{}).filter(m=>S.mf[m]&&mfExpTotal(m));
+  if(!months.length){ box.style.display='none'; return; }
+  box.style.display='block';
+  const sums={};
+  for(const m of months) for(const c of MF_CATS){ const v=+S.mf[m].cats[c]||0; if(v) sums[c]=(sums[c]||0)+v; }
+  const rows=Object.entries(sums).map(([c,t])=>[c, t/months.length, t]).sort((a,b)=>b[1]-a[1]);
+  const max=rows.length?rows[0][1]:1;
+  box.innerHTML='<h4>📊 カテゴリ別 月平均（実績 '+months.length+'ヶ月）</h4>'+
+    rows.map(([c,avg,t])=>`<div class="catrow"><span class="nm">${c}</span><span class="bar"><i style="width:${Math.max(2,avg/max*100)}%"></i></span><span class="v">${yen(Math.round(avg))}<small>/月（年 ${yen(Math.round(t*12/months.length))}）</small></span></div>`).join('');
+}
+
+// ══════ 📅 ライフプランシート（年次一覧） ══════
+function renderLifeSheet(){
+  const box=document.getElementById('lifesheet'); if(!box) return;
+  const sim=simulate(0.03);
+  const startAge=myAge(), nowY=new Date().getFullYear();
+  const rows=sim.filter(p=>p.age<=90);
+  const years=rows.map((p,i)=>nowY+i);
+  const th='<tr><th>項目</th>'+years.map((y,i)=>`<th${y===nowY?' class="now"':''}>${y}</th>`).join('')+'</tr>';
+  // 家族の年齢
+  let ageRows=`<tr><td>👤 あなた</td>${rows.map(p=>`<td>${p.age}</td>`).join('')}</tr>`;
+  S.kids.forEach((k,ki)=>{
+    const by=+(k.birth||'').split('-')[0]||nowY;
+    ageRows+=`<tr><td>${['👦','👧','🧒'][ki]||'🧒'} 第${'一二三四五'[ki]||ki+1}子</td>${years.map(y=>{const a=y-by;return `<td>${a>=0?a:'—'}</td>`;}).join('')}</tr>`;
+  });
+  // イベント行（手動イベント＋進学の節目）
+  const evByYear={};
+  const put=(y,txt)=>{ if(y>=years[0]&&y<=years[years.length-1]) evByYear[y]=(evByYear[y]?evByYear[y]+'・':'')+txt; };
+  for(const ev of S.events) put(ev.year, (EVDEF[ev.type]||{}).label||ev.type);
+  S.kids.forEach((k,ki)=>{
+    const by=+(k.birth||'').split('-')[0]||nowY; const nm=`第${'一二三四五'[ki]||ki+1}子`;
+    const st=k.stages||DEFAULT_STAGES;
+    put(by,`${nm}誕生`); put(by+6,`${nm}小学校`); put(by+12,`${nm}中学`); put(by+15,`${nm}高校`);
+    if(st.dai!=='none') put(by+18,`${nm}大学`);
+    if(st.grad&&st.grad!=='none') put(by+22,`${nm}院`);
+    put(by+(st.grad&&st.grad!=='none'?24:st.dai!=='none'?22:18),`${nm}就職`);
+  });
+  put(nowY+(S.retire-startAge),'🌿リタイア');
+  const evRow=`<tr class="ev"><td>📌 ライフイベント</td>${years.map(y=>`<td>${evByYear[y]||''}</td>`).join('')}</tr>`;
+  const yenM=v=>Math.round(v*10000).toLocaleString();
+  const incRow=`<tr class="inc"><td>💰 収入合計（年）</td>${rows.map(p=>`<td>${yenM(p.inc)}</td>`).join('')}</tr>`;
+  const expRow=`<tr class="exp"><td>💸 支出合計（年）</td>${rows.map(p=>`<td>${yenM(p.exp)}</td>`).join('')}</tr>`;
+  const balRow=`<tr><td>⚖️ 年間収支</td>${rows.map(p=>{const d=p.inc-p.exp;return `<td class="${d<0?'neg':''}">${d<0?'-':''}${yenM(Math.abs(d))}</td>`;}).join('')}</tr>`;
+  const astRow=`<tr class="ast"><td>🏦 資産（年末・万円）</td>${rows.map(p=>`<td class="${p.a<0?'neg':''}">${Math.round(p.a).toLocaleString()}</td>`).join('')}</tr>`;
+  box.innerHTML=`<table class="lps">${th}${ageRows}${evRow}${incRow}${expRow}${balRow}${astRow}</table>`;
+}
+
 // ══════ ari-mama風ダッシュボード描画 ══════
 function impAdj(){ const i=S.imp||{}; return {inc:+i.inc||0, gen:+i.gen||0, sen:+i.sen||0, care:+i.care||0}; }
 function hasImp(){ const a=impAdj(); return a.inc||a.gen||a.sen||a.care; }
@@ -971,7 +1065,7 @@ function render(){
   document.getElementById('care_note').textContent = cares.length? `0-2歳の保育形態: ${cares.join('・')}` : '0-2歳のお子さんなし';
   document.getElementById('v_edu').textContent = fmt(eduMonthlyNeed()) + ' 万円/月';
 
-  renderKidsNow(); renderKidsFuture(); renderEvents(); renderMF(); renderEnemy4(); renderBudget(); renderLife(); renderDashboard(); drawChart();
+  renderKidsNow(); renderKidsFuture(); renderEvents(); renderMF(); renderEnemy4(); renderCatAvg(); renderBudget(); renderLife(); renderDashboard(); renderLifeSheet(); drawChart();
 }
 function drawChart(){
   const cv=document.getElementById('chart'); const ctx=cv.getContext('2d');
