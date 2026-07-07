@@ -215,6 +215,8 @@
   .frow input[type=number]{width:120px;padding:8px;border:1.5px solid var(--line);border-radius:8px;font-size:1rem;text-align:right}
   .frow select,.frow input[type=month]{padding:8px;border:1.5px solid var(--line);border-radius:8px}
   .approx{font-size:.68rem;background:var(--sky);color:var(--blue);border-radius:6px;padding:2px 8px;font-weight:700}
+  .drop{border:2px dashed var(--line);border-radius:12px;padding:14px;text-align:center;font-size:.78rem;color:#7b87a3;cursor:pointer;background:#fff;transition:border-color .15s}
+  .drop.on{border-color:var(--blue);color:var(--blue)}
   .kidcard{background:var(--sky);border-radius:12px;padding:10px 14px;margin:8px 0}
   .kidcard .frow{border-bottom:0;padding:5px 0}
 
@@ -271,7 +273,9 @@
     <h2>月の生活費は？（住居費をのぞく）</h2>
     <small>食費・光熱・通信・保険など。マネーフォワードの実績があれば平均を</small>
     <p class="q"><input class="biginput" type="number" id="w_living" value="22" min="1" max="200"><span class="unit">万円/月</span></p>
-    <button class="ghost" onclick="alert('MF CSVドロップ取込はv3正式版で搭載（v2の機能を移植予定）')">📂 マネーフォワードCSVから自動入力</button>
+    <button class="ghost" onclick="document.getElementById('w_mfcsv').click()">📂 マネーフォワードCSVから自動入力</button>
+    <input type="file" id="w_mfcsv" accept=".csv,text/csv" multiple style="display:none" onchange="wizImportMF(this)">
+    <p id="w_mfsum" style="font-size:.75rem;color:#5b6b80;margin-top:6px"></p>
   </div>
   <div id="w3" style="display:none">
     <h2>ご家族と暮らしについて</h2>
@@ -339,8 +343,12 @@
     <p style="font-size:.72rem;color:#8a8672;margin-bottom:6px">1年間の支出を「毎月/不定期 × 固定/変動」の4つの敵に分けて抜け漏れなく把握するで。目標=<b>4つ全部の支出を手取りの8割以内</b>（残業代・ボーナス含まず）・2割は貯蓄・投資へ。</p>
     <div id="enemy4"></div>
     <div class="catavg" id="catavg" style="display:none"></div>
-    <h3 style="font-size:.92rem;margin:16px 0 6px">📒 収支リスト（マネーフォワード実績・2025/07〜2026/06）</h3>
-    <p style="font-size:.75rem;color:#96a0b8;margin-bottom:8px">セルをクリックで手修正できるで。横スクロールで全月表示。</p>
+    <h3 style="font-size:.92rem;margin:16px 0 6px">📥 マネーフォワードCSV取込</h3>
+    <div class="drop" id="mfdrop">MFの家計簿CSV（家計簿 → データエクスポート）をここにドロップ、またはクリックで選択。複数月まとめてOK。<br><b>処理はぜんぶこの端末内で完結（どこにも送信せえへん）</b></div>
+    <input type="file" id="mffile" accept=".csv,text/csv" multiple style="display:none">
+    <p id="mfsum" style="font-size:.78rem;color:#5b6b80;margin:6px 0 0"></p>
+    <h3 style="font-size:.92rem;margin:16px 0 6px">📒 収支リスト（マネーフォワード実績）</h3>
+    <p style="font-size:.75rem;color:#96a0b8;margin-bottom:8px">セルをクリックで手修正できるで。横スクロールで全月表示。CSV取込した月は自動で列が増える。</p>
     <div id="mftable" style="overflow-x:auto;border:1px solid var(--line);border-radius:12px"></div>
   </div>
 
@@ -464,7 +472,7 @@
 </div>
 
 <footer>
-  すべての計算は<b>概算</b>です（認可保育料=市の階層表の概算・認可外=保活マップ準拠の目安7万円/月・教育費=文科省「子供の学習費調査」ベースの丸め値・年金=モデル世帯の概算）。<br>
+  すべての計算は<b>概算</b>です（認可保育料=名古屋市は令和7年度の市公式階層表〔市民税所得割を収入から概算換算・多子軽減①②③反映〕・他市は階層表の概算・認可外=保活マップ準拠の目安7万円/月・教育費=文科省「子供の学習費調査」ベースの丸め値・年金=モデル世帯の概算）。<br>
   本ツールは情報提供のみを目的とし、投資助言・保険募集ではありません。数値の正確性は保証されません。<br>
   データは端末内（localStorage）に保存。Googleログイン中は本人のFirestore領域にも同期され、他人からは読めません。
 </footer>
@@ -495,6 +503,7 @@ function load(){
   }catch(e){ return JSON.parse(JSON.stringify(DEF)); }
 }
 function save(){
+  if(typeof _swCache!=='undefined') _swCache=null;  // 所得割キャッシュをクリア（収入変更に追随）
   S.updatedAt = Date.now();                       // 端末間の新旧判定用
   localStorage.setItem('yoyu_v3', JSON.stringify(S));
   if(window.cloudPush) window.cloudPush(JSON.parse(JSON.stringify(S)));  // ログイン中ならクラウドへ（debounce付き）
@@ -546,21 +555,22 @@ function renderMF(){
   const box=document.getElementById('mftable'); if(!box) return;
   S.mf = S.mf || {};
   for(const [m,d] of Object.entries(MF_SEED)) if(!S.mf[m]) S.mf[m]={inc:d.inc, cats:{...d.cats}};  // 種データ（既存は上書きしない）
-  const th=m=>{const[y,mm]=m.split('-');return `${y}/${mm}/25〜`;};
+  const MS = Object.keys(S.mf).length ? Object.keys(S.mf).sort() : MF_MONTHS;  // 取込済みの月を全部表示
+  const th=m=>{const[y,mm]=m.split('-');return `${y}/${mm}`;};
   const cellS='padding:7px 10px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;border-top:1px solid var(--line);cursor:pointer';
   const headS='padding:8px 10px;text-align:right;white-space:nowrap;font-weight:700;background:#f0f3fa';
-  let h='<table style="border-collapse:collapse;font-size:.82rem;min-width:100%"><tr><th style="'+headS+';text-align:left;position:sticky;left:0;z-index:2">項目</th>'+MF_MONTHS.map(m=>'<th style="'+headS+'">'+th(m)+'</th>').join('')+'</tr>';
+  let h='<table style="border-collapse:collapse;font-size:.82rem;min-width:100%"><tr><th style="'+headS+';text-align:left;position:sticky;left:0;z-index:2">項目</th>'+MS.map(m=>'<th style="'+headS+'">'+th(m)+'</th>').join('')+'</tr>';
   // 収入合計（青帯）
-  h+='<tr style="background:#e3f0fb;font-weight:800"><td style="padding:7px 10px;position:sticky;left:0;background:#e3f0fb">収入合計</td>'+MF_MONTHS.map(m=>`<td style="${cellS};border-top:0" data-mf="${m}|inc">${yen(S.mf[m]?.inc)}</td>`).join('')+'</tr>';
+  h+='<tr style="background:#e3f0fb;font-weight:800"><td style="padding:7px 10px;position:sticky;left:0;background:#e3f0fb">収入合計</td>'+MS.map(m=>`<td style="${cellS};border-top:0" data-mf="${m}|inc">${yen(S.mf[m]?.inc)}</td>`).join('')+'</tr>';
   // 支出合計（オレンジ帯）
-  h+='<tr style="background:#fdecd8;font-weight:800"><td style="padding:7px 10px;position:sticky;left:0;background:#fdecd8">支出合計</td>'+MF_MONTHS.map(m=>`<td style="${cellS.replace('cursor:pointer','')}">${yen(mfExpTotal(m))}</td>`).join('')+'</tr>';
+  h+='<tr style="background:#fdecd8;font-weight:800"><td style="padding:7px 10px;position:sticky;left:0;background:#fdecd8">支出合計</td>'+MS.map(m=>`<td style="${cellS.replace('cursor:pointer','')}">${yen(mfExpTotal(m))}</td>`).join('')+'</tr>';
   // 費目
   for(const c of MF_CATS){
     h+='<tr><td style="padding:6px 10px;color:#5b6b80;position:sticky;left:0;background:#fff;border-top:1px solid var(--line)">'+c+'</td>'+
-      MF_MONTHS.map(m=>`<td style="${cellS}" data-mf="${m}|${c}">${S.mf[m]?yen(+S.mf[m].cats[c]||0):'—'}</td>`).join('')+'</tr>';
+      MS.map(m=>`<td style="${cellS}" data-mf="${m}|${c}">${S.mf[m]?yen(+S.mf[m].cats[c]||0):'—'}</td>`).join('')+'</tr>';
   }
   // 収支合計
-  h+='<tr style="background:#f7f3ea;font-weight:800"><td style="padding:7px 10px;position:sticky;left:0;background:#f7f3ea">収支合計</td>'+MF_MONTHS.map(m=>{
+  h+='<tr style="background:#f7f3ea;font-weight:800"><td style="padding:7px 10px;position:sticky;left:0;background:#f7f3ea">収支合計</td>'+MS.map(m=>{
     const d=S.mf[m]; if(!d) return `<td style="${cellS.replace('cursor:pointer','')}">—</td>`;
     const v=d.inc-mfExpTotal(m);
     return `<td style="${cellS.replace('cursor:pointer','')};color:${v<0?'var(--bad)':'var(--safe)'}">${yen(v)}</td>`;
@@ -577,17 +587,175 @@ function renderMF(){
   });
 }
 
+// ══════ MF CSV取込（v2から移植・全処理ブラウザ内完結／外部送信なし） ══════
+function splitCSVLine(l){
+  const out=[]; let cur='', q=false;
+  for(let i=0;i<l.length;i++){ const ch=l[i];
+    if(ch==='"'){ if(q&&l[i+1]==='"'){cur+='"';i++;} else q=!q; }
+    else if(ch===','&&!q){ out.push(cur); cur=''; }
+    else cur+=ch;
+  }
+  out.push(cur); return out;
+}
+async function importMFFiles(files){
+  let rows=[];
+  for(const f of files){
+    const buf=await f.arrayBuffer();
+    let txt=new TextDecoder('utf-8').decode(buf);
+    if(txt.includes('�')) txt=new TextDecoder('shift_jis').decode(buf);  // MF既定はShift_JIS
+    txt.split(/\r?\n/).forEach(l=>{ const c=splitCSVLine(l); if(c.length>4) rows.push(c); });
+  }
+  const head=rows.find(r=>r.some(c=>c.includes('大項目')));
+  if(!head) return {err:'MFのCSV形式が読めんかった（「大項目」列が見つからん）。家計簿→データエクスポートのCSVを使ってな'};
+  const hi={}; head.forEach((c,i)=>{ hi[c.trim()]=i; });
+  const di=hi['日付'], ai=hi['金額（円）'], ci=hi['大項目'], ti=hi['計算対象'];
+  const agg={};
+  for(const r of rows){
+    if(r===head) continue;
+    const amt=parseFloat((r[ai]||'').replace(/[^\-0-9.]/g,''));
+    if(!r[di]||isNaN(amt)) continue;
+    if(ti!==undefined && (r[ti]||'').trim()==='0') continue;    // 計算対象外は除外
+    const dm=(r[di]||'').match(/(\d{4})[\/\-](\d{1,2})/); if(!dm) continue;
+    const m=dm[1]+'-'+('0'+dm[2]).slice(-2);
+    agg[m]=agg[m]||{inc:0,cats:{}};
+    if(amt>0){ agg[m].inc+=amt; continue; }                     // プラス=収入
+    let cat=(r[ci]||'').trim();
+    if(!MF_CATS.includes(cat)) cat=cat?'その他':'未分類';
+    agg[m].cats[cat]=(agg[m].cats[cat]||0)-amt;                 // マイナス=支出（正の値で保存）
+  }
+  const ms=Object.keys(agg).sort();
+  if(!ms.length) return {err:'取り込める行が見つからんかった'};
+  S.mf=S.mf||{};
+  for(const m of ms){
+    S.mf[m]={inc:Math.round(agg[m].inc), cats:{}};              // 取込月は上書き・他の月は残る
+    for(const [c,v] of Object.entries(agg[m].cats)) S.mf[m].cats[c]=Math.round(v);
+  }
+  save();
+  return {months:ms};
+}
+function mfSummaryHTML(res){
+  if(res.err) return '⚠️ '+res.err;
+  const ms=res.months;
+  const la=mfLivingAvg();
+  let h=`✅ <b>${ms.length}ヶ月分</b>を取込（${ms[0].replace('-','/')}〜${ms[ms.length-1].replace('-','/')}）。収支リスト・4つの敵・通信簿に反映したで。CSVは端末内処理・保存は月別集計値のみ。`;
+  if(la) h+=`<br>MF実績の生活費目安（住宅・車・教育を除く月平均）: <b>${la.toFixed(1)}万円</b> → <button class="ghost" style="padding:2px 10px;font-size:.75rem" onclick="S.living=+${la.toFixed(1)};save();render();document.getElementById('mfsum').innerHTML+=' ✔ 反映した'">「いま」タブの生活費に反映する</button>`;
+  return h;
+}
+function setupMFDrop(){
+  const drop=document.getElementById('mfdrop'), file=document.getElementById('mffile');
+  if(!drop||drop.dataset.wired) return;
+  drop.dataset.wired='1';
+  const handle=async fs=>{
+    if(!fs||!fs.length) return;
+    document.getElementById('mfsum').textContent='取込中…';
+    const res=await importMFFiles(fs);
+    if(!res.err) render();
+    document.getElementById('mfsum').innerHTML=mfSummaryHTML(res);
+  };
+  drop.onclick=()=>file.click();
+  file.onchange=()=>{ handle(file.files); file.value=''; };
+  drop.ondragover=e=>{ e.preventDefault(); drop.classList.add('on'); };
+  drop.ondragleave=()=>drop.classList.remove('on');
+  drop.ondrop=e=>{ e.preventDefault(); drop.classList.remove('on'); handle(e.dataTransfer.files); };
+}
+
 // ══════ 保育エンジン ══════
 const NINKAGAI_DEFAULT = 7.0; // 認可外の目安 月7万円（保活マップ連携の既定値）
+// 名古屋市以外は市の階層表の粗い概算（世帯手取り年収ベース・【概算】表示）
 const HOIKU = {
-  '名古屋市':   [[330,1.6],[470,2.7],[640,3.7],[930,4.9],[9999,5.8]],
   '豊田市':     [[330,1.5],[470,2.5],[640,3.4],[930,4.4],[9999,5.2]],
   '岡崎市':     [[330,1.5],[470,2.6],[640,3.5],[930,4.6],[9999,5.4]],
   '一宮市':     [[330,1.5],[470,2.5],[640,3.5],[930,4.5],[9999,5.3]],
   '豊橋市':     [[330,1.4],[470,2.5],[640,3.4],[930,4.4],[9999,5.2]],
   'その他（平均）':[[330,1.5],[470,2.6],[640,3.5],[930,4.6],[9999,5.4]],
 };
-function hoikuFee(annualIncomeMan, city, kidIndex){
+
+// ── 名古屋市: 令和7年度 利用者負担額（保育料）基準月額表（3歳未満児・保育標準時間認定）
+//    出典: 名古屋市子ども青少年局「利用者負担額（保育料）のお知らせ」（r7mimannjihoikuryou.pdf・市公式）
+//    階層は「税源移譲前の税率で算定した市民税所得割課税額」（父母合算）で決まる
+const NAGOYA_TIERS=[            // [所得割上限(円・未満), 月額(円), 階層名]
+  [10000,  6400, 'C2'],
+  [40800,  7500, 'C3'],
+  [43800, 11200, 'C4'],
+  [55200, 13900, 'C5'],
+  [67000, 17500, 'C6'],
+  [88800, 22100, 'C7'],
+  [110000,25800, 'C8'],
+  [131600,29400, 'C9'],
+  [180000,34900, 'C10'],
+  [236800,42700, 'C11'],
+  [281000,50300, 'C12'],
+  [351500,58300, 'C13'],
+  [411800,63400, 'C14'],
+  [518000,63900, 'C15'],
+  [Infinity,64000,'C16'],
+];
+
+// ── 手取り年収(万円)→市民税所得割額(円)の概算換算（給与収入1人分）
+//    手取り→額面を逆算し、給与所得控除・社保(約14.5%)・基礎控除を引いて税源移譲前税率(3/8/10%)を適用【概算】
+function kyuyoKojo(g){ // 給与所得控除(万円)・令和2年分以降
+  if(g<=162.5) return 55;
+  if(g<=180) return g*0.4-10;
+  if(g<=360) return g*0.3+8;
+  if(g<=660) return g*0.2+44;
+  if(g<=850) return g*0.1+110;
+  return 195;
+}
+function incomeTaxMan(k){ // 所得税(万円)・課税所得k万円
+  const b=[[195,.05,0],[330,.10,9.75],[695,.20,42.75],[900,.23,63.6],[1800,.33,153.6],[4000,.40,279.6],[Infinity,.45,479.6]];
+  for(const [cap,r,d] of b) if(k<=cap) return Math.max(0,k*r-d);
+  return 0;
+}
+function netFromGrossMan(g){ // 額面年収→手取り年収(万円)【概算】
+  const ks=Math.max(0,g-kyuyoKojo(g)), sh=g*0.145;
+  const tax=incomeTaxMan(Math.max(0,ks-sh-48))*1.021;          // 所得税＋復興特別所得税
+  const jumin=Math.max(0,ks-sh-43)*0.10+0.5;                    // 住民税10%＋均等割
+  return g-sh-tax-jumin;
+}
+function grossFromNetMan(net){ // 手取り→額面の逆算（二分探索）
+  if(net<=0) return 0;
+  let lo=net, hi=net*1.7+50;
+  for(let i=0;i<40;i++){ const mid=(lo+hi)/2; if(netFromGrossMan(mid)<net) lo=mid; else hi=mid; }
+  return (lo+hi)/2;
+}
+function personShotokuwariYen(netAnnualMan){ // 1人分の税源移譲前 市民税所得割(円)【概算】
+  if(netAnnualMan<=0) return 0;
+  const g=grossFromNetMan(netAnnualMan);
+  const kazei=Math.max(0, g-kyuyoKojo(g) - g*0.145 - 43);       // 住民税ベース課税所得(万円)
+  let z=Math.min(kazei,200)*0.03;                                // 税源移譲前税率: 〜200万 3%
+  if(kazei>200) z+=Math.min(kazei-200,500)*0.08;                 //  200〜700万 8%
+  if(kazei>700) z+=(kazei-700)*0.10;                             //  700万超 10%
+  return Math.round(z*10000);
+}
+let _swCache=null; // 入力が変わるたび render() 側でクリア
+function householdShotokuwariYen(){ // 父母合算の所得割(円)【概算】ボーナスは本人側に加算
+  if(_swCache!=null) return _swCache;
+  let sw=personShotokuwariYen(S.myNet*12 + (+S.bonus||0));
+  if(S.spouseWork==='part'||S.spouseWork==='full') sw+=personShotokuwariYen(S.spouseNet*12);
+  return _swCache=sw;
+}
+// ── 名古屋市の保育料。kidIndex=全きょうだい内の順位(0始まり・年長順) / preRank=就学前きょうだい内の順位 / totalKids=18歳未満の子の数
+function nagoyaFee(kidIndex, preRank, totalKids){
+  // ③世帯第3子以降無料制度（18歳到達年度末までの子が3人以上いる世帯の第3子以降・3歳未満児）
+  if(totalKids>=3 && kidIndex>=2) return {fee:0, tier:'第3子以降無料'};
+  const sw=householdShotokuwariYen();
+  let base, tier;
+  const netAnnual=netTotal()*12+(+S.bonus||0);
+  if(sw<=0){
+    if(netAnnual<=210) return {fee:0, tier:'B(非課税想定)', sw};  // 非課税世帯の想定【概算】
+    base=5700; tier='C1(均等割のみ想定)';
+  } else {
+    for(const [cap,v,name] of NAGOYA_TIERS){ if(sw<cap){ base=v; tier=name; break; } }
+  }
+  if(sw<57700){        // ①多子世帯軽減（C1〜C6の一部）: 年齢問わず2人目半額・3人目以降無料
+    if(kidIndex>=2) base=0; else if(kidIndex===1) base=Math.round(base/2);
+  } else {             // ②同時利用軽減: 就学前きょうだい同時利用で2人目半額・3人目以降無料
+    if(preRank>=2) base=0; else if(preRank===1) base=Math.round(base/2);
+  }
+  return {fee:base/10000, tier, sw};
+}
+function hoikuFee(annualIncomeMan, city, kidIndex, preRank, totalKids){
+  if(city==='名古屋市') return nagoyaFee(kidIndex, preRank??kidIndex, totalKids??(S.kids?S.kids.length:1)).fee;
   const t=(HOIKU[city]||HOIKU['その他（平均）']);
   let fee=t[t.length-1][1];
   for(const [cap,v] of t){ if(annualIncomeMan<=cap){ fee=v; break; } }
@@ -625,7 +793,12 @@ function kidCost(kidAge, city, annualIncome, kidIndex, k){
   if(kidAge<0) return 0;
   if(kidAge<=2){
     const care=careOf(k);
-    if(care==='ninka') return hoikuFee(annualIncome, city, kidIndex);
+    if(care==='ninka'){
+      // その年の就学前(0-5歳)きょうだい内での順位（同時利用軽減の判定用・年齢差から算出）
+      const off=kidAge-ageFrom(k.birth);
+      const preRank=(S.kids||[]).filter((kk,j)=>{ const a=ageFrom(kk.birth)+off; return j<kidIndex && a>=0 && a<=5; }).length;
+      return hoikuFee(annualIncome, city, kidIndex, preRank, (S.kids||[]).length);
+    }
     if(care==='ninkagai') return k.careFee ?? NINKAGAI_DEFAULT;
     return 0; // 自宅
   }
@@ -1028,6 +1201,7 @@ function renderDiag(K){
 // ══════ 描画 ══════
 function fmt(x){ return (Math.round(x*10)/10).toLocaleString(); }
 function render(){
+  _swCache=null;
   if(!S.setup){
     document.getElementById('dash').style.display='none';
     if(window.wizActive){ document.getElementById('gate').style.display='none'; document.getElementById('wizard').style.display='block'; fillWiz(); renderWizKids(); }
@@ -1061,8 +1235,14 @@ function render(){
   document.getElementById('c_yoyu').className = 'rcard ' + (yo>3?'ok':yo>0?'warn':'bad');
 
   document.getElementById('v_hoiku').textContent = fmt(kidsCostNow()) + ' 万円/月';
-  const cares=S.kids.filter(k=>ageFrom(k.birth)>=0&&ageFrom(k.birth)<=2).map(k=>CARE_LABEL[careOf(k)].split('（')[0]);
-  document.getElementById('care_note').textContent = cares.length? `0-2歳の保育形態: ${cares.join('・')}` : '0-2歳のお子さんなし';
+  const u2=S.kids.filter(k=>ageFrom(k.birth)>=0&&ageFrom(k.birth)<=2);
+  const cares=u2.map(k=>CARE_LABEL[careOf(k)].split('（')[0]);
+  let careNote = cares.length? `0-2歳の保育形態: ${cares.join('・')}` : '0-2歳のお子さんなし';
+  if(S.city==='名古屋市' && u2.some(k=>careOf(k)==='ninka')){
+    const ng=nagoyaFee(0,0,S.kids.length);
+    careNote += `／名古屋市 R7年度 ${ng.tier}階層（世帯所得割 概算${((ng.sw||0)/10000).toFixed(1)}万円・市公式表）`;
+  }
+  document.getElementById('care_note').textContent = careNote;
   document.getElementById('v_edu').textContent = fmt(eduMonthlyNeed()) + ' 万円/月';
 
   renderKidsNow(); renderKidsFuture(); renderEvents(); renderMF(); renderEnemy4(); renderCatAvg(); renderBudget(); renderLife(); renderDashboard(); renderLifeSheet(); drawChart();
@@ -1128,6 +1308,17 @@ function fillWiz(){
 
 // ══════ ウィザード ══════
 let wstep=1;
+async function wizImportMF(inp){ // ウィザードSTEP2: CSV取込→生活費を自動セット
+  const sum=document.getElementById('w_mfsum');
+  if(!inp.files||!inp.files.length) return;
+  sum.textContent='取込中…（端末内だけで処理）';
+  const res=await importMFFiles(inp.files);
+  inp.value='';
+  if(res.err){ sum.textContent='⚠️ '+res.err; return; }
+  const la=mfLivingAvg();
+  if(la) document.getElementById('w_living').value=la.toFixed(1);
+  sum.innerHTML=`✅ ${res.months.length}ヶ月分を取込。${la?`生活費に月平均 <b>${la.toFixed(1)}万円</b>（住宅・車・教育を除く）をセットしたで。`:''}実績は「これまで」タブに貯まっとる`;
+}
 function wizNext(){
   if(wstep===1){
     S.myNet=+document.getElementById('w_mynet').value||DEF.myNet;
@@ -1294,6 +1485,7 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
 }));
 
 render();
+setupMFDrop();
 </script>
 <script type="module">
 // ══════ Google連携（Firestore同期・benchmark-naviと同じFirebaseプロジェクト） ══════
