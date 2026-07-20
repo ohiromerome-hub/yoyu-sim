@@ -210,9 +210,10 @@ function mfListHTML(){
   cats.sort((a,b)=>ms.reduce((s2,m)=>s2+((V.step2.mf[m].cats||{})[b]||0),0)-ms.reduce((s2,m)=>s2+((V.step2.mf[m].cats||{})[a]||0),0));
   const expOf=m=>Object.values(V.step2.mf[m].cats||{}).reduce((a,b)=>a+b,0);
   const cell=(m,cat)=>{
-    const v=cat==null? (V.step2.mf[m].inc||0) : ((V.step2.mf[m].cats||{})[cat]||0);
-    const set=cat==null? `V.step2.mf['${m}'].inc=+this.value||0` : `(V.step2.mf['${m}'].cats=V.step2.mf['${m}'].cats||{})['${esc(cat)}']=+this.value||0`;
-    return `<td><input type="number" class="cellin" value="${Math.round(v)}" onchange="${set};save();render()"></td>`;
+    const v=Math.round(cat==null? (V.step2.mf[m].inc||0) : ((V.step2.mf[m].cats||{})[cat]||0));
+    const set=cat==null? `V.step2.mf['${m}'].inc=NUM` : `(V.step2.mf['${m}'].cats=V.step2.mf['${m}'].cats||{})['${esc(cat)}']=NUM`;
+    const onch=set.replace('NUM',"(parseInt(String(this.value).replace(/[^0-9-]/g,''),10)||0)");
+    return `<td><input type="text" inputmode="numeric" class="cellin" value="${v.toLocaleString()}" onchange="${onch};save();render()"></td>`;
   };
   return `<div class="card">
     <h3>📊 収支リスト（直近${ms.length}ヶ月・マネーフォワード実績）</h3>
@@ -483,7 +484,7 @@ function renderS2(){
   ${sos?`<div class="sos">${sos.msg}</div>`:''}
   <div class="card">
     <h3>📂 マネーフォワードCSV取込</h3>
-    <div id="mfdrop">📂 マネーフォワードのCSVをここにドロップ（またはタップして選択）<br><span class="note">全処理は端末内。保存されるのは期間別の集計値のみ</span></div>
+    <div id="mfdrop">📂 マネーフォワードのCSVをここにドロップ（またはタップして選択）<br><b style="font-size:.78rem">複数ファイルまとめてOK — 12ヶ月分を一気にドロップできます</b><br><span class="note">全処理は端末内。保存されるのは期間別の集計値のみ</span></div>
     <input type="file" id="mffile" accept=".csv" multiple style="display:none">
     <div class="note" id="mfsum" style="margin:6px 0">${Object.keys(V.step2.mf).length?`取込済み: ${Object.keys(V.step2.mf).length}期間`:''}</div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.82rem;font-weight:700;border-top:1px dashed var(--line);padding-top:8px">
