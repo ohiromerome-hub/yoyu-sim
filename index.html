@@ -264,7 +264,7 @@ function cfRows(ratePct, wif){
       inc=+V.family.me.pension||0;
       exp=expenseMonthly()*0.85+kidsC - (+wif.exp||0);
     }
-    let evSum=0; const evLabels=[];
+    let evSum=0, evFlag=false; const evLabels=[];
     for(const ev of V.step3.events){
       const hit = ev.repeat? (yr>=ev.year && (yr-ev.year)%ev.repeat===0 && (!ev.until||yr<=ev.until)) : (ev.year===yr);
       if(!hit) continue;
@@ -272,10 +272,11 @@ function cfRows(ratePct, wif){
       else if(ev.kind==='inc'){ evSum+=+ev.amount||0; }         // 一時収入
       else { evSum-=+ev.amount||0; }                            // 一時支出
       evLabels.push(ev.label);
+      if(!ev.repeat||ev.repeat>1) evFlag=true;                  // 毎年ものはカーブに旗を立てない
     }
     const flow=(inc-exp)*12+evSum;
     a=a*(1+r)+flow;
-    rows.push({yr, meAge, kidsAges, inc:inc*12, exp:exp*12, ev:evSum, evLabels, flow, bal:a});
+    rows.push({yr, meAge, kidsAges, inc:inc*12, exp:exp*12, ev:evSum, evLabels, evFlag, flow, bal:a});
     if(a<-3000) break;
   }
   return rows;
@@ -580,7 +581,7 @@ function drawCF(){
     ctx.stroke();
   }
   ctx.lineWidth=1; ctx.fillStyle='#4a7fb5'; ctx.textAlign='center'; ctx.font='12px sans-serif';
-  series[2].rows.forEach(p=>{ if(p.evLabels.length){ ctx.fillText('⚑',X(p.meAge),Y(p.bal)-8); } });
+  series[2].rows.forEach(p=>{ if(p.evFlag){ ctx.fillText('⚑',X(p.meAge),Y(p.bal)-8); } });
 }
 
 /* ══════════════ ナビ・配線 ══════════════ */
