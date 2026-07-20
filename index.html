@@ -60,6 +60,15 @@ tr.neg td{background:#fdecea}
 tr.ev td{color:var(--blue)}
 td.minus{color:var(--red);font-weight:700}
 td.plus{color:var(--green)}
+/* 収支リスト（MF実績・直近12ヶ月） */
+.mflist td:first-child,.mflist th:first-child{position:sticky;left:0;background:#fff;z-index:2;min-width:96px;box-shadow:1px 0 0 var(--line)}
+.mflist th:first-child{background:#faf3df}
+.mflist tr.inc-row td{background:#e7f2fb;font-weight:900}
+.mflist tr.inc-row td:first-child{background:#e7f2fb}
+.mflist tr.exp-row td{background:#fdebd3;font-weight:900}
+.mflist tr.exp-row td:first-child{background:#fdebd3}
+.mflist tr.sum-row td{background:#f7f2e2;font-weight:900;border-top:2px solid var(--line)}
+.mflist tr.sum-row td:first-child{background:#f7f2e2}
 /* 収支バー */
 .bar{height:12px;border-radius:99px;background:#f2e6c8;overflow:hidden;display:flex}
 .bar i{display:block;height:100%}
@@ -168,6 +177,29 @@ function mfAvgByCat(){
   ms.forEach(m=>{ const cs=V.step2.mf[m].cats||{}; for(const [c,v] of Object.entries(cs)){ const k=MF_MAP[c]||"その他"; sum[k]=(sum[k]||0)+v; } });
   const out={}; for(const [k,v] of Object.entries(sum)) out[k]=Math.round(v/ms.length/1000)/10; // 円→万円
   return {months:ms.length, cats:out};
+}
+
+/* ── 収支リスト（MF実績・直近12ヶ月・マネフォ風） ── */
+function mfListHTML(){
+  const ms=Object.keys(V.step2.mf).sort().slice(-12);
+  if(!ms.length) return '';
+  const yen0=v=>Math.round(v).toLocaleString()+'円';
+  const cats=[...new Set(ms.flatMap(m=>Object.keys(V.step2.mf[m].cats||{})))];
+  cats.sort((a,b)=>ms.reduce((s2,m)=>s2+((V.step2.mf[m].cats||{})[b]||0),0)-ms.reduce((s2,m)=>s2+((V.step2.mf[m].cats||{})[a]||0),0));
+  const expOf=m=>Object.values(V.step2.mf[m].cats||{}).reduce((a,b)=>a+b,0);
+  return `<div class="card">
+    <h3>📊 収支リスト（直近${ms.length}ヶ月・マネーフォワード実績）</h3>
+    <div class="twrap"><table class="mflist" style="min-width:${140+ms.length*104}px">
+      <thead><tr><th></th>${ms.map(m=>`<th>${m.replace('-','/')}</th>`).join('')}</tr></thead>
+      <tbody>
+        <tr class="inc-row"><td>収入合計</td>${ms.map(m=>`<td>${yen0(V.step2.mf[m].inc||0)}</td>`).join('')}</tr>
+        <tr class="exp-row"><td>支出合計</td>${ms.map(m=>`<td>${yen0(expOf(m))}</td>`).join('')}</tr>
+        ${cats.map(c=>`<tr><td>${esc(c)}</td>${ms.map(m=>{const v=(V.step2.mf[m].cats||{})[c]||0;return `<td>${v?yen0(v):'0円'}</td>`;}).join('')}</tr>`).join('')}
+        <tr class="sum-row"><td>収支合計</td>${ms.map(m=>{const d=(V.step2.mf[m].inc||0)-expOf(m);return `<td class="${d<0?'minus':''}">${yen0(d)}</td>`;}).join('')}</tr>
+      </tbody>
+    </table></div>
+    <div class="note">CSVを追加ドロップすると月が増えます（同じ月は上書き）。カテゴリはマネーフォワードの大項目のまま表示。</div>
+  </div>`;
 }
 
 /* ══════════════ 保育料エンジン（v3から移植） ══════════════ */
@@ -455,6 +487,7 @@ function renderS2(){
       <span class="${mb>=0?'':'minus'}" style="color:${mb>=0?'var(--green)':'var(--red)'}">月間収支 ${man(mb)}</span>
     </div>
   </div>
+  ${mfListHTML()}
   <div class="card">
     <h3>⚖️ バランスシート（資産と負債・万円）</h3>
     <div class="row2">
