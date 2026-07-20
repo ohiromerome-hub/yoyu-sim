@@ -69,6 +69,9 @@ td.plus{color:var(--green)}
 .mflist tr.exp-row td:first-child{background:#fdebd3}
 .mflist tr.sum-row td{background:#f7f2e2;font-weight:900;border-top:2px solid var(--line)}
 .mflist tr.sum-row td:first-child{background:#f7f2e2}
+.mflist input.cellin{width:96px;padding:2px 4px;font-size:.74rem;text-align:right;border:1px solid transparent;background:transparent;border-radius:6px}
+.mflist input.cellin:hover{border-color:var(--line)} .mflist input.cellin:focus{border-color:var(--orange);background:#fff}
+.mflist tr.inc-row input.cellin{font-weight:900;background:transparent}
 /* 収支バー */
 .bar{height:12px;border-radius:99px;background:#f2e6c8;overflow:hidden;display:flex}
 .bar i{display:block;height:100%}
@@ -159,9 +162,9 @@ const thisYear=new Date().getFullYear();
 const EXP_CATS=["住居費","食費","水道光熱費","通信費","保険","車","日用品","趣味・娯楽","衣服・美容","交際費","その他"];
 function mfAvgInc(){ const ms=Object.keys(V.step2.mf).sort().slice(-6); if(!ms.length) return null; return Math.round(ms.reduce((s,m)=>s+(V.step2.mf[m].inc||0),0)/ms.length/1000)/10; }
 function manualIncM(){ const i=V.step2.inc; const sp=(V.family.spouse.enabled&&(V.family.spouse.work==='full'||V.family.spouse.work==='part'))?(+i.spNet||0):0; return (+i.meNet||0)+sp+(+i.other||0); }
-function incomeMonthly(){ if(V.step2.incMode==='mf'&&mfAvgInc()!=null) return mfAvgInc(); return manualIncM(); }
-function incomeAnnual(){ const i=V.step2.inc;
-  if(V.step2.incMode==='mf'&&mfAvgInc()!=null) return mfAvgInc()*12;  // MF実績は賞与月も平均に含まれる
+function incomeMonthly(){ const a=mfAvgInc(); return a!=null? a : manualIncM(); }  // MF実績があれば常にデフォルト
+function incomeAnnual(){ const i=V.step2.inc; const a=mfAvgInc();
+  if(a!=null) return a*12;  // MF実績は賞与月も平均に含まれる
   return manualIncM()*12+(+i.meBonus||0)+((V.family.spouse.enabled&&(V.family.spouse.work==='full'||V.family.spouse.work==='part'))?(+i.spBonus||0):0); }
 function expenseMonthly(){ return EXP_CATS.reduce((s,c)=>s+(+V.step2.exp[c]||0),0); }
 function assetsFin(){ return V.step2.assets.filter(a=>a.type==='cash'||a.type==='invest').reduce((s,a)=>s+(+a.amount||0),0); }
@@ -179,6 +182,25 @@ function mfAvgByCat(){
   return {months:ms.length, cats:out};
 }
 
+/* ── 集計期間（マネフォ再現: 毎月N日から1ヶ月・土日は前後の平日へ調整。祝日は判定不可のため対象外） ── */
+function adjWeekend(d){
+  const shift=V.step2.mfShift||'prev'; if(shift==='none') return d;
+  const wd=d.getDay(); const x=new Date(d);
+  if(wd===6) x.setDate(x.getDate()+(shift==='prev'?-1:2));      // 土
+  else if(wd===0) x.setDate(x.getDate()+(shift==='prev'?-2:1)); // 日
+  return x;
+}
+function periodBoundary(y,mIdx){ return adjWeekend(new Date(y,mIdx,Math.min(28,Math.max(1,+V.step2.mfStart||1)))); }
+function periodKeyOf(dateStr){
+  const dm=(dateStr||'').match(/(\d{4})[\/\-](\d{1,2})(?:[\/\-](\d{1,2}))?/); if(!dm) return null;
+  const d=new Date(+dm[1], +dm[2]-1, +(dm[3]||1));
+  let best=null;
+  for(let k=-1;k<=1;k++){ const b=periodBoundary(d.getFullYear(), d.getMonth()+k); if(b<=d&&(!best||b>best)) best=b; }
+  if(!best) return null;
+  return best.getFullYear()+'-'+('0'+(best.getMonth()+1)).slice(-2)+'-'+('0'+best.getDate()).slice(-2);
+}
+const periodLabel=m=> m.length>7? (+m.slice(5,7))+'/'+(+m.slice(8,10))+'〜' : m.replace('-','/');
+
 /* ── 収支リスト（MF実績・直近12ヶ月・マネフォ風） ── */
 function mfListHTML(){
   const ms=Object.keys(V.step2.mf).sort().slice(-12);
@@ -187,18 +209,23 @@ function mfListHTML(){
   const cats=[...new Set(ms.flatMap(m=>Object.keys(V.step2.mf[m].cats||{})))];
   cats.sort((a,b)=>ms.reduce((s2,m)=>s2+((V.step2.mf[m].cats||{})[b]||0),0)-ms.reduce((s2,m)=>s2+((V.step2.mf[m].cats||{})[a]||0),0));
   const expOf=m=>Object.values(V.step2.mf[m].cats||{}).reduce((a,b)=>a+b,0);
+  const cell=(m,cat)=>{
+    const v=cat==null? (V.step2.mf[m].inc||0) : ((V.step2.mf[m].cats||{})[cat]||0);
+    const set=cat==null? `V.step2.mf['${m}'].inc=+this.value||0` : `(V.step2.mf['${m}'].cats=V.step2.mf['${m}'].cats||{})['${esc(cat)}']=+this.value||0`;
+    return `<td><input type="number" class="cellin" value="${Math.round(v)}" onchange="${set};save();render()"></td>`;
+  };
   return `<div class="card">
     <h3>📊 収支リスト（直近${ms.length}ヶ月・マネーフォワード実績）</h3>
-    <div class="twrap"><table class="mflist" style="min-width:${140+ms.length*104}px">
-      <thead><tr><th></th>${ms.map(m=>`<th>${m.replace('-','/')}</th>`).join('')}</tr></thead>
+    <div class="twrap"><table class="mflist" style="min-width:${140+ms.length*112}px">
+      <thead><tr><th></th>${ms.map(m=>`<th>${periodLabel(m)}</th>`).join('')}</tr></thead>
       <tbody>
-        <tr class="inc-row"><td>収入合計</td>${ms.map(m=>`<td>${yen0(V.step2.mf[m].inc||0)}</td>`).join('')}</tr>
+        <tr class="inc-row"><td>収入合計</td>${ms.map(m=>cell(m,null)).join('')}</tr>
         <tr class="exp-row"><td>支出合計</td>${ms.map(m=>`<td>${yen0(expOf(m))}</td>`).join('')}</tr>
-        ${cats.map(c=>`<tr><td>${esc(c)}</td>${ms.map(m=>{const v=(V.step2.mf[m].cats||{})[c]||0;return `<td>${v?yen0(v):'0円'}</td>`;}).join('')}</tr>`).join('')}
+        ${cats.map(c=>`<tr><td>${esc(c)}</td>${ms.map(m=>cell(m,c)).join('')}</tr>`).join('')}
         <tr class="sum-row"><td>収支合計</td>${ms.map(m=>{const d=(V.step2.mf[m].inc||0)-expOf(m);return `<td class="${d<0?'minus':''}">${yen0(d)}</td>`;}).join('')}</tr>
       </tbody>
     </table></div>
-    <div class="note">CSVを追加ドロップすると月が増えます（同じ月は上書き）。カテゴリはマネーフォワードの大項目のまま表示。</div>
+    <div class="note">✏️ <b>数字はセルを直接編集できます</b>（円単位・合計と平均に即反映）。CSVを追加ドロップすると期間が増えます（同じ期間は上書き）。カテゴリはマネーフォワードの大項目のまま表示。</div>
   </div>`;
 }
 
@@ -338,8 +365,7 @@ async function importMFFiles(files){
     if(r===head) continue;
     const amt=parseFloat((r[ai]||'').replace(/[^\-0-9.]/g,'')); if(!r[di]||isNaN(amt)) continue;
     if(ti!==undefined&&(r[ti]||'').trim()==='0') continue;
-    const dm=(r[di]||'').match(/(\d{4})[\/\-](\d{1,2})/); if(!dm) continue;
-    const m=dm[1]+'-'+('0'+dm[2]).slice(-2);
+    const m=periodKeyOf(r[di]||''); if(!m) continue;
     agg[m]=agg[m]||{inc:0,cats:{}};
     if(amt>0){ agg[m].inc+=amt; continue; }
     const cat=(r[ci]||'').trim()||'未分類';
@@ -456,12 +482,23 @@ function renderS2(){
   <h2><span class="no">2</span>収支表 ＆ バランスシート</h2>
   ${sos?`<div class="sos">${sos.msg}</div>`:''}
   <div class="card">
+    <h3>📂 マネーフォワードCSV取込</h3>
+    <div id="mfdrop">📂 マネーフォワードのCSVをここにドロップ（またはタップして選択）<br><span class="note">全処理は端末内。保存されるのは期間別の集計値のみ</span></div>
+    <input type="file" id="mffile" accept=".csv" multiple style="display:none">
+    <div class="note" id="mfsum" style="margin:6px 0">${Object.keys(V.step2.mf).length?`取込済み: ${Object.keys(V.step2.mf).length}期間`:''}</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.82rem;font-weight:700;border-top:1px dashed var(--line);padding-top:8px">
+      集計期間: 毎月 <select onchange="V.step2.mfStart=+this.value;save();render()">${Array.from({length:28},(_,x)=>`<option value="${x+1}" ${(+V.step2.mfStart||1)===x+1?'selected':''}>${x+1}</option>`).join('')}</select> 日から1ヶ月
+      <select onchange="V.step2.mfShift=this.value;save();render()">
+        ${[['prev','設定日が土日→前の平日にする'],['next','設定日が土日→後の平日にする'],['none','変更しない']].map(([v,l])=>`<option value="${v}" ${(V.step2.mfShift||'prev')===v?'selected':''}>${l}</option>`).join('')}
+      </select>
+    </div>
+    <div class="note">マネーフォワード本家の集計期間設定に合わせられます（祝日は判定できないため土日のみ調整）。${Object.keys(V.step2.mf).length?'<b>設定を変えた場合は、CSVをもう一度ドロップすると新しい期間で集計し直します。</b>':''}</div>
+    ${mfa?`<div class="note" style="margin-top:6px">直近${mfa.months}期間の平均（収入 ${mfAvgInc()}万/月・支出 ${Object.values(mfa.cats).reduce((a,b)=>a+b,0).toFixed(1)}万/月） → <button class="ghost" onclick="mfApply()">支出欄へ反映する</button></div>`:''}
+  </div>
+  ${mfListHTML()}
+  <div class="card">
     <h3>💵 収入（手取り・万円）</h3>
-    ${mfAvgInc()!=null?`<div class="chips" style="margin-bottom:6px">
-      <span class="pill ${V.step2.incMode!=='mf'?'on':''}" onclick="V.step2.incMode='manual';save();render()">手入力</span>
-      <span class="pill ${V.step2.incMode==='mf'?'on':''}" onclick="V.step2.incMode='mf';save();render()">📂 MF実績を使う（月平均 ${mfAvgInc()}万・賞与込み）</span>
-    </div>`:''}
-    ${V.step2.incMode==='mf'&&mfAvgInc()!=null?`<div class="note" style="margin-bottom:6px">収支・CF表の収入はMF実績の月平均を使用中。下の内訳は<b>保育料の階層判定にだけ</b>使われます</div>`:''}
+    ${mfAvgInc()!=null?`<div class="safe" style="margin:0 0 8px">📂 収支・CF表の収入は<b>MF実績の月平均 ${mfAvgInc()}万（賞与込み）</b>を自動で使用中。金額を直したいときは上の収支リストのセルを直接編集。下の内訳は<b>保育料の階層判定</b>に使われます</div>`:''}
     <div class="row2">
       <label class="fl">あなた 月 <span><input type="number" value="${i.meNet}" onchange="V.step2.inc.meNet=+this.value;save();render()"> <span class="u">万</span></span></label>
       <label class="fl">あなた 賞与 年 <span><input type="number" value="${i.meBonus}" onchange="V.step2.inc.meBonus=+this.value;save();render()"> <span class="u">万</span></span></label>
@@ -474,10 +511,6 @@ function renderS2(){
   </div>
   <div class="card">
     <h3>🧾 支出（月・万円）</h3>
-    <div id="mfdrop">📂 マネーフォワードのCSVをここにドロップ（またはタップして選択）<br><span class="note">全処理は端末内。保存されるのは月別の集計値のみ</span></div>
-    <input type="file" id="mffile" accept=".csv" multiple style="display:none">
-    <div class="note" id="mfsum" style="margin:6px 0">${Object.keys(V.step2.mf).length?`取込済み: ${Object.keys(V.step2.mf).length}ヶ月分`:''}</div>
-    ${mfa?`<div class="note">MF直近${mfa.months}ヶ月平均（収入 ${mfAvgInc()}万/月・支出 ${Object.values(mfa.cats).reduce((a,b)=>a+b,0).toFixed(1)}万/月） → <button class="ghost" onclick="mfApply()">収入・支出に反映する</button></div>`:''}
     <div class="row2" style="margin-top:8px">
       ${EXP_CATS.map(c=>`<label class="fl">${c} <span><input type="number" step="0.1" value="${V.step2.exp[c]??''}" placeholder="0" onchange="V.step2.exp['${c}']=+this.value||0;save();render()"> <span class="u">万</span></span></label>`).join('')}
     </div>
@@ -487,7 +520,6 @@ function renderS2(){
       <span class="${mb>=0?'':'minus'}" style="color:${mb>=0?'var(--green)':'var(--red)'}">月間収支 ${man(mb)}</span>
     </div>
   </div>
-  ${mfListHTML()}
   <div class="card">
     <h3>⚖️ バランスシート（資産と負債・万円）</h3>
     <div class="row2">
@@ -636,7 +668,7 @@ function render(){
 }
 function s1Prompt(p){ const t=$('vision'); t.value=(t.value?t.value+'\n':'')+'■ '+p+'\n'; t.focus(); }
 function s1Save(){ V.step1.vision=$('vision').value; save(); $('s1msg').textContent='✅ 保存しました（ホームにも表示されます）'; }
-function mfApply(){ const m=mfAvgByCat(); if(!m) return; for(const [k,v] of Object.entries(m.cats)) V.step2.exp[k]=v; if(mfAvgInc()!=null) V.step2.incMode='mf'; save(); render(); }
+function mfApply(){ const m=mfAvgByCat(); if(!m) return; for(const [k,v] of Object.entries(m.cats)) V.step2.exp[k]=v; save(); render(); }
 function wireMF(){
   const drop=$('mfdrop'), file=$('mffile'); if(!drop||drop.dataset.wired) return; drop.dataset.wired='1';
   const handle=async fs=>{ if(!fs||!fs.length) return; $('mfsum').textContent='取込中…';
