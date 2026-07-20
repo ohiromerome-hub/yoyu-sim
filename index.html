@@ -110,7 +110,7 @@ dialog::backdrop{background:rgba(74,59,38,.35)}
 <div class="wrap"><div id="main"></div>
 <footer>
   金額はすべて概算・万円単位。保育料=名古屋市R7公式表（多子軽減込み）/知立市R8公式表・他市は概算。教育費=文科省「子供の学習費調査」ベース。<br>
-  データはこの端末（ログイン時はあなたのGoogleアカウントのクラウド）にのみ保存。将来を保証するものではありません。
+  データはこの端末（ログイン時は世帯共有クラウド＝許可した2つのGoogleアカウントで同じデータ）にのみ保存。将来を保証するものではありません。
 </footer>
 </div>
 
@@ -707,7 +707,10 @@ const fapp=initializeApp({apiKey:"AIzaSyB-Jk2D7rszFv0DJs-EsheeijZYdFql1fM",authD
 const auth=getAuth(fapp), db=getFirestore(fapp);
 const $a=document.getElementById('auth');
 let user=null, cloudOK=false, timer=null;
-const refOf=u=>doc(db,'users',u.uid);
+// 世帯共有: 許可された2アカウント（ohirome.rome / arubounonikki）は同じドキュメントを読み書きする
+// （Firestoreルール側でメール制限済み。それ以外のアカウントは同期不可＝端末内のみで動作）
+const refOf=()=>doc(db,'households','yoyu');
+const legacyRef=u=>doc(db,'users',u.uid);
 const btnS='margin-left:8px;font:inherit;font-size:11px;font-weight:700;padding:3px 12px;border-radius:99px;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.16);color:#fff;cursor:pointer';
 function stat(m){ const el=document.getElementById('syncstat'); if(el) el.textContent=m; }
 async function cloudFlush(s){
@@ -732,7 +735,13 @@ onAuthStateChanged(auth, async u=>{
     location.reload();
   };
   try{
-    const snap=await getDoc(refOf(u)); cloudOK=true;
+    let snap=await getDoc(refOf()); cloudOK=true;
+    // 引越し: 世帯ドキュメントが空で、旧保存先(users/{uid})にv4データがあれば持ってくる
+    if(!(snap.exists()&&snap.data().yoyu_v4)){
+      try{ const old=await getDoc(legacyRef(u));
+        if(old.exists()&&old.data().yoyu_v4){ await setDoc(refOf(),{yoyu_v4:old.data().yoyu_v4},{merge:true}); snap=await getDoc(refOf()); stat('☁ 旧保存先から引越し完了'); }
+      }catch(e){}
+    }
     const local=JSON.parse(localStorage.getItem('yoyu_v4')||'{}');
     const lastUid=localStorage.getItem('yoyu_uid');
     localStorage.setItem('yoyu_uid',u.uid);
