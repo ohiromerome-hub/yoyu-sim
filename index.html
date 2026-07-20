@@ -148,8 +148,12 @@ const thisYear=new Date().getFullYear();
 
 /* ══════════════ 収支・BS 計算 ══════════════ */
 const EXP_CATS=["住居費","食費","水道光熱費","通信費","保険","車","日用品","趣味・娯楽","衣服・美容","交際費","その他"];
-function incomeMonthly(){ const i=V.step2.inc; const sp=(V.family.spouse.enabled&&(V.family.spouse.work==='full'||V.family.spouse.work==='part'))?(+i.spNet||0):0; return (+i.meNet||0)+sp+(+i.other||0); }
-function incomeAnnual(){ const i=V.step2.inc; return incomeMonthly()*12+(+i.meBonus||0)+((V.family.spouse.enabled&&(V.family.spouse.work==='full'||V.family.spouse.work==='part'))?(+i.spBonus||0):0); }
+function mfAvgInc(){ const ms=Object.keys(V.step2.mf).sort().slice(-6); if(!ms.length) return null; return Math.round(ms.reduce((s,m)=>s+(V.step2.mf[m].inc||0),0)/ms.length/1000)/10; }
+function manualIncM(){ const i=V.step2.inc; const sp=(V.family.spouse.enabled&&(V.family.spouse.work==='full'||V.family.spouse.work==='part'))?(+i.spNet||0):0; return (+i.meNet||0)+sp+(+i.other||0); }
+function incomeMonthly(){ if(V.step2.incMode==='mf'&&mfAvgInc()!=null) return mfAvgInc(); return manualIncM(); }
+function incomeAnnual(){ const i=V.step2.inc;
+  if(V.step2.incMode==='mf'&&mfAvgInc()!=null) return mfAvgInc()*12;  // MF実績は賞与月も平均に含まれる
+  return manualIncM()*12+(+i.meBonus||0)+((V.family.spouse.enabled&&(V.family.spouse.work==='full'||V.family.spouse.work==='part'))?(+i.spBonus||0):0); }
 function expenseMonthly(){ return EXP_CATS.reduce((s,c)=>s+(+V.step2.exp[c]||0),0); }
 function assetsFin(){ return V.step2.assets.filter(a=>a.type==='cash'||a.type==='invest').reduce((s,a)=>s+(+a.amount||0),0); }
 function assetsAll(){ return V.step2.assets.reduce((s,a)=>s+(+a.amount||0),0); }
@@ -421,6 +425,11 @@ function renderS2(){
   ${sos?`<div class="sos">${sos.msg}</div>`:''}
   <div class="card">
     <h3>💵 収入（手取り・万円）</h3>
+    ${mfAvgInc()!=null?`<div class="chips" style="margin-bottom:6px">
+      <span class="pill ${V.step2.incMode!=='mf'?'on':''}" onclick="V.step2.incMode='manual';save();render()">手入力</span>
+      <span class="pill ${V.step2.incMode==='mf'?'on':''}" onclick="V.step2.incMode='mf';save();render()">📂 MF実績を使う（月平均 ${mfAvgInc()}万・賞与込み）</span>
+    </div>`:''}
+    ${V.step2.incMode==='mf'&&mfAvgInc()!=null?`<div class="note" style="margin-bottom:6px">収支・CF表の収入はMF実績の月平均を使用中。下の内訳は<b>保育料の階層判定にだけ</b>使われます</div>`:''}
     <div class="row2">
       <label class="fl">あなた 月 <span><input type="number" value="${i.meNet}" onchange="V.step2.inc.meNet=+this.value;save();render()"> <span class="u">万</span></span></label>
       <label class="fl">あなた 賞与 年 <span><input type="number" value="${i.meBonus}" onchange="V.step2.inc.meBonus=+this.value;save();render()"> <span class="u">万</span></span></label>
@@ -436,7 +445,7 @@ function renderS2(){
     <div id="mfdrop">📂 マネーフォワードのCSVをここにドロップ（またはタップして選択）<br><span class="note">全処理は端末内。保存されるのは月別の集計値のみ</span></div>
     <input type="file" id="mffile" accept=".csv" multiple style="display:none">
     <div class="note" id="mfsum" style="margin:6px 0">${Object.keys(V.step2.mf).length?`取込済み: ${Object.keys(V.step2.mf).length}ヶ月分`:''}</div>
-    ${mfa?`<div class="note">MF直近${mfa.months}ヶ月平均 → <button class="ghost" onclick="mfApply()">支出欄へ反映する</button></div>`:''}
+    ${mfa?`<div class="note">MF直近${mfa.months}ヶ月平均（収入 ${mfAvgInc()}万/月・支出 ${Object.values(mfa.cats).reduce((a,b)=>a+b,0).toFixed(1)}万/月） → <button class="ghost" onclick="mfApply()">収入・支出に反映する</button></div>`:''}
     <div class="row2" style="margin-top:8px">
       ${EXP_CATS.map(c=>`<label class="fl">${c} <span><input type="number" step="0.1" value="${V.step2.exp[c]??''}" placeholder="0" onchange="V.step2.exp['${c}']=+this.value||0;save();render()"> <span class="u">万</span></span></label>`).join('')}
     </div>
@@ -594,12 +603,12 @@ function render(){
 }
 function s1Prompt(p){ const t=$('vision'); t.value=(t.value?t.value+'\n':'')+'■ '+p+'\n'; t.focus(); }
 function s1Save(){ V.step1.vision=$('vision').value; save(); $('s1msg').textContent='✅ 保存しました（ホームにも表示されます）'; }
-function mfApply(){ const m=mfAvgByCat(); if(!m) return; for(const [k,v] of Object.entries(m.cats)) V.step2.exp[k]=v; save(); render(); }
+function mfApply(){ const m=mfAvgByCat(); if(!m) return; for(const [k,v] of Object.entries(m.cats)) V.step2.exp[k]=v; if(mfAvgInc()!=null) V.step2.incMode='mf'; save(); render(); }
 function wireMF(){
   const drop=$('mfdrop'), file=$('mffile'); if(!drop||drop.dataset.wired) return; drop.dataset.wired='1';
   const handle=async fs=>{ if(!fs||!fs.length) return; $('mfsum').textContent='取込中…';
     const res=await importMFFiles(fs);
-    $('mfsum').innerHTML = res.err? '⚠️ '+esc(res.err) : `✅ ${res.months.length}ヶ月分を取込（${res.months[0]}〜${res.months[res.months.length-1]}）`;
+    $('mfsum').innerHTML = res.err? '⚠️ '+esc(res.err) : `✅ ${res.months.length}ヶ月分を取込（${res.months[0]}〜${res.months[res.months.length-1]}・収入も集計済み）`;
     if(!res.err) render(); };
   drop.onclick=()=>file.click();
   file.onchange=()=>{ handle(file.files); file.value=''; };
